@@ -34,3 +34,4 @@ build/
 
 
 assets/models/facenet.tflite
+git_common.txt
