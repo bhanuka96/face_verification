@@ -47,7 +47,7 @@ class _OfflineFacePageState extends State<OfflineFacePage> {
       final picked = await picker.pickImage(source: ImageSource.camera);
       if (picked == null) return;
       setState(() => statusMessage = 'Registering...');
-      final id = await FaceVerification.instance.registerFromImagePath(imagePath: picked.path, displayName: 'User ${DateTime.now().millisecondsSinceEpoch}');
+      final id = await FaceVerification.instance.registerFromImagePath(imagePath: picked.path, id: '${DateTime.now().millisecondsSinceEpoch}', imageId: 'User ${DateTime.now().millisecondsSinceEpoch}');
       if (!mounted) return;
       final users = await FaceVerification.instance.listRegisteredAsync();
       setState(() {
@@ -72,7 +72,7 @@ class _OfflineFacePageState extends State<OfflineFacePage> {
       if (!mounted) return;
       setState(() => statusMessage = null);
       if (match != null) {
-        _show('MATCH', 'Matched: ${match.name}');
+        _show('MATCH', 'Matched: $match');
       } else {
         _show('NO MATCH', 'No user matched.');
       }
