@@ -1,25 +1,21 @@
 // lib/src/services/storage.dart
 import 'dart:convert';
+import 'dart:developer';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 class FaceRecord {
   final String id;
-  final String name;
+  final String imageId;
   final List<double> embedding;
-  final String? imagePath;
 
-  FaceRecord(this.id, this.name, this.embedding, {this.imagePath});
+  FaceRecord(this.id, this.imageId, this.embedding);
 
-  Map<String, Object?> toMap() => {'id': id, 'name': name, 'embedding': jsonEncode(embedding), 'image_path': imagePath};
+  Map<String, Object?> toMap() => {'id': id, 'image_id': imageId, 'embedding': jsonEncode(embedding)};
 
-  static FaceRecord fromMap(Map<String, Object?> map) => FaceRecord(
-    map['id'] as String,
-    map['name'] as String,
-    (jsonDecode(map['embedding'] as String) as List).map((e) => (e as num).toDouble()).toList(),
-    imagePath: map['image_path'] as String?,
-  );
+  static FaceRecord fromMap(Map<String, Object?> map) =>
+      FaceRecord(map['id'] as String, map['image_id'] as String, (jsonDecode(map['embedding'] as String) as List).map((e) => (e as num).toDouble()).toList());
 }
 
 class FaceStore {
@@ -31,18 +27,47 @@ class FaceStore {
     final dbPath = p.join(dir.path, 'face_verification.db');
     _db = await openDatabase(
       dbPath,
-      version: 1,
+      version: 2,
       onCreate: (db, v) async {
         await db.execute('''
         CREATE TABLE faces (
           id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          embedding TEXT NOT NULL,
-          image_path TEXT
+          image_id TEXT NOT NULL,
+          embedding TEXT NOT NULL
         )
       ''');
       },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          log('Migrating database from version $oldVersion to $newVersion');
+          // Drop the old table
+          await db.execute('DROP TABLE IF EXISTS faces');
+          
+          // Create new table with new schema
+          await db.execute('''
+            CREATE TABLE faces (
+              id TEXT PRIMARY KEY,
+              image_id TEXT NOT NULL,
+              embedding TEXT NOT NULL
+            )
+          ''');
+          
+          log('Database recreated successfully');
+        }
+      },
     );
+  }
+
+  /// Get a face record by ID
+  Future<FaceRecord?> getById(String id) async {
+    final db = _ensureDb();
+    final result = await db.query('faces', where: 'id = ?', whereArgs: [id], limit: 1);
+
+    if (result.isEmpty) {
+      return null;
+    }
+
+    return FaceRecord.fromMap(result.first);
   }
 
   Future<void> upsert(FaceRecord record) async {
