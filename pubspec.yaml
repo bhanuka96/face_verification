@@ -1,6 +1,6 @@
 name: face_verification
 description: On-device face verification using FaceNet-style embeddings with an offline TFLite model for Flutter (Android/iOS).
-version: 0.0.2
+version: 0.0.3
 homepage: https://github.com/bhanuka96/face_verification
 repository: https://github.com/bhanuka96/face_verification
 issue_tracker: https://github.com/bhanuka96/face_verification/issues

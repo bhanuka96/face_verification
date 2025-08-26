@@ -16,7 +16,7 @@ Add the dependency in your app’s `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.0.1
+  face_verification: ^0.0.3
 ```
 
 Then run:
