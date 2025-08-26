@@ -1,0 +1,40 @@
+# Mirror common ignores, but DO NOT exclude the TFLite model so it ships to pub.dev
+
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code (kept included by default)
+#.vscode/
+
+# Flutter/Dart/Pub related
+/pubspec.lock
+**/doc/api/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+
+# Keep the model in the published package
+!assets/models/facenet.tflite
+
+# Other local-only files
+git_common.txt
+
+
