@@ -151,11 +151,8 @@ class FaceVerification {
     if (id.trim().isEmpty || imageId.trim().isEmpty) {
       return false;
     }
-
-    log('ID:$id,StaffId:$imageId');
-
+    
     final record = await _store.getById(id);
-    inspect(record);
     return record != null && record.imageId == imageId;
   }
 
