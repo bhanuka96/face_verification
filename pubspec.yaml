@@ -1,5 +1,5 @@
 name: face_verification
-description: "A new Flutter plugin project."
+description: On-device face verification using FaceNet-style embeddings with an offline TFLite model for Flutter (Android/iOS).
 version: 0.0.1
 homepage:
 
