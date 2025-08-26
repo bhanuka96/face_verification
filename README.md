@@ -1,4 +1,4 @@
-# face_verification
+# Face Verification — On‑Device FaceNet Embeddings
 
 Face verification for Flutter: detect a face in an image, generate an on-device embedding with a bundled TFLite model, store embeddings locally, and verify new images against the stored records using cosine similarity.
 
@@ -75,43 +75,13 @@ Note: You may set a newer deployment target, but not older than 15.5.
 
 Ensure your Android project `build.gradle`/`build.gradle.kts` matches these values.
 
-### Additional runtime setup (when applicable)
-
-These notes help ensure the on-device ML runtime loads correctly across platforms:
-
-#### Mobile (iOS and Android)
+### Additional mobile runtime notes
 
 - Build and install on a physical device for best results.
 - iOS Simulator may not support certain ML runtimes reliably; prefer a physical device.
 - Android devices should be on recent API levels. If you encounter native library load issues, test on a device with API level ≥ 26.
 - Creating an iOS release archive (IPA) can strip symbols and cause a "Failed to lookup symbol" error. In Xcode:
   - Target Runner > Build Settings > Strip Style → set to "Non-Global Symbols".
-
-#### Desktop (optional)
-
-If you target desktop platforms, you may need to bundle a platform-specific dynamic library for the ML runtime.
-
-- macOS: Build a `.dylib` for your architecture(s) and add it to your Xcode project.
-  - For universal builds, combine arm64/x86_64 with `lipo`.
-- Linux: Build a `.so`, place it in a `blobs/` directory, and reference it from `linux/CMakeLists.txt`:
-
-```cmake
-# get ml runtime binaries
-install(
-  FILES ${PROJECT_BUILD_DIR}/../blobs/libtensorflowlite_c-linux.so
-  DESTINATION ${INSTALL_BUNDLE_DATA_DIR}/../blobs/
-)
-```
-
-- Windows: Build a `.dll`, place it in `blobs/`, and reference it from `windows/CMakeLists.txt`:
-
-```cmake
-# get ml runtime binaries
-install(
-  FILES ${PROJECT_BUILD_DIR}/../blobs/libtensorflowlite_c-win.dll 
-  DESTINATION ${INSTALL_BUNDLE_DATA_DIR}/../blobs/
-)
-```
 
 ## Quick start
 
@@ -137,14 +107,24 @@ Future<void> run() async {
   );
   print('Best match: $matchId');
 
-  // List all registered faces
+  // Optional: restrict matching to a known ID using staffId
+  // - If staffId is provided, verification compares only with that user's record
+  // - If staffId is null, verification compares against all registered faces
+  final matchSpecific = await FaceVerification.instance.verifyFromImagePath(
+    imagePath: '/path/to/another_face.jpg',
+    threshold: 0.70,
+    staffId: 'user_123',
+  );
+  print('Match for user_123: $matchSpecific');
+
+  // Optional: List all registered faces
   final records = await FaceVerification.instance.listRegisteredAsync();
   print('Registered count: ${records.length}');
 
   // Optional: delete a record
   await FaceVerification.instance.deleteRecord('user_123');
 
-  // Dispose when done
+  // Optional: Dispose when done
   await FaceVerification.instance.dispose();
 }
 ```
