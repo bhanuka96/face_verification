@@ -1,3 +1,14 @@
+## 0.0.4
+
+- Docs: Complete README overhaul with improved user experience
+  - Added clear value proposition and use cases upfront
+  - Enhanced step-by-step usage guide with practical examples
+  - Improved code snippets with real-world scenarios
+  - Added comprehensive troubleshooting section
+  - Better organized platform setup instructions
+  - Added tips for optimal photo quality and threshold tuning
+  - Improved formatting with emojis and visual hierarchy for better readability
+
 ## 0.0.3
 
 - Docs: sync install snippet to ^0.0.2
