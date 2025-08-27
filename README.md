@@ -44,7 +44,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.0.4
+  face_verification: ^0.0.5
 ```
 
 Run:
@@ -274,7 +274,7 @@ flutter run
 
 ## 🆘 Need Help?
 
-Having issues? Please [open an issue](https://github.com/your-repo/issues) with:
+Having issues? Please [open an issue](https://github.com/bhanuka96/face_verification/issues) with:
 
 - Your platform (iOS/Android) and versions
 - Device model

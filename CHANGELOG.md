@@ -1,3 +1,7 @@
+## 0.0.5
+
+- Docs: Fixed repository URL in README issues section
+
 ## 0.0.4
 
 - Docs: Complete README overhaul with improved user experience
