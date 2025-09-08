@@ -45,7 +45,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.0.5
+  face_verification: ^0.0.6
 ```
 
 Run:
