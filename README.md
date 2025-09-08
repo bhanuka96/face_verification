@@ -8,9 +8,10 @@ Perfect for attendance systems, secure login, user verification, and access cont
 
 - **Register faces**: Take a photo and save someone's face profile
 - **Verify identity**: Check if a new photo matches any registered person
+- **Check registration status**: Verify if someone is already registered
 - **Works offline**: No internet required, all processing on-device
 - **Privacy-first**: Face data never leaves the device
-- **Simple API**: Just 3 main functions to get started
+- **Simple API**: Just a few main functions to get started
 
 ## 📱 Quick Demo
 
@@ -66,7 +67,7 @@ platform :ios, '15.5'
 
 post_install do |installer|
   installer.pods_project.build_configurations.each do |config|
-    config.build_settings["EXCLUDED_ARCHS[sdk=*"] = "armv7"
+    config.build_settings["EXCLUDED_ARCHS[sdk=*]"] = "armv7"
     config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
   end
   
@@ -132,7 +133,7 @@ Future<void> registerNewPerson(String personId, String photoPath) async {
     final result = await FaceVerification.instance.registerFromImagePath(
       id: personId,           // Unique ID like 'employee_123' or 'user_john'
       imagePath: photoPath,   // Path to their photo
-      imageId: 'main_photo',  // Optional: label for this photo
+      imageId: 'main_photo',  // Required: label for this photo
     );
     
     print('✅ Successfully registered: $result');
@@ -189,7 +190,37 @@ Future<void> verifySpecificPerson(String photoPath, String expectedPersonId) asy
 }
 ```
 
-## 🔧 Useful Management Functions
+## 🔧 Registration Status & Management Functions
+
+### Check Registration Status
+Before registering or to prevent duplicates:
+
+```dart
+// Check if someone is already registered by ID
+final isRegistered = await FaceVerification.instance.isFaceRegistered('john_doe');
+if (isRegistered) {
+  print('User john_doe is already registered');
+} else {
+  print('User john_doe is not registered yet');
+}
+
+// Check if specific ID + imageId combination exists
+final hasSpecificImage = await FaceVerification.instance.isFaceRegisteredWithImageId(
+  'john_doe', 
+  'profile_pic'
+);
+if (hasSpecificImage) {
+  print('Exact match found - same person with same image');
+}
+```
+
+**Use cases for registration checks:**
+- Prevent duplicate registrations
+- Show appropriate UI (register vs re-register)
+- Validate before allowing re-registration
+- Check if user needs to register first
+
+### Other Management Functions
 
 ```dart
 // List all registered people
@@ -235,6 +266,11 @@ The `threshold` parameter controls how strict face matching is:
 **"Multiple faces detected"**
 - Crop photo to show only one person
 - Use photos with single subjects
+
+**"ID already exists" error**
+- Check if user is already registered using `isFaceRegistered()`
+- Use different imageId for re-registration
+- Delete existing record first if needed
 
 **iOS build errors**
 - Make sure you excluded armv7 architecture as shown above

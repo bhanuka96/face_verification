@@ -1,3 +1,22 @@
+## 0.0.6
+
+- **Feature**: Added new registration status check functions
+  - `isFaceRegistered(String id)` - Check if a face is registered by ID
+  - `isFaceRegisteredWithImageId(String id, String imageId)` - Check for specific ID + imageId combination
+- **Docs**: Enhanced README with comprehensive registration management section
+  - Added detailed examples for registration status checks
+  - Included use cases for preventing duplicate registrations
+  - Updated feature list to highlight registration status capabilities
+  - Fixed iOS Podfile configuration syntax error
+  - Clarified `imageId` parameter as required (not optional)
+  - Added troubleshooting for "ID already exists" error
+- **Dependencies**: Updated example app dependencies
+  - `image_picker: ^1.2.0` (from ^1.1.2)
+  - Updated various transitive dependencies
+- **Dependencies**: Updated plugin dependencies
+  - `plugin_platform_interface: ^2.1.8` (from ^2.0.2) 
+  - `path_provider: ^2.1.5` (from ^2.1.4)
+
 ## 0.0.5
 
 - Docs: Fixed repository URL in README issues section
