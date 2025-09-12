@@ -1,48 +1,70 @@
+## 0.0.7
+
+* **Feature**: Support multiple faces per user
+
+  * Users can register multiple face images using different `imageId` values
+  * Optional `replace` flag allows overwriting an existing `(id, imageId)` entry
+  * Verification checks all faces for a given user (`staffId`) or all users
+* **Feature**: Per-user face management functions
+
+  * `getFacesForUser(String id)` – List all face records for a user
+  * `getFacesCountForUser(String id)` – Count number of face samples for a user
+  * `deleteFace(String id, String imageId)` – Remove a specific face sample
+  * `deleteRecord(String id)` – Remove all face samples for a user
+* **Database**: Migrated schema to composite primary key `(id, imageId)` with `createdAt` timestamp
+* **Docs**: Updated README to reflect multi-face support and new management functions
+* **Dependencies / Version**: Bumped package version to `0.0.7`
+
 ## 0.0.6
 
-- **Feature**: Added new registration status check functions
-  - `isFaceRegistered(String id)` - Check if a face is registered by ID
-  - `isFaceRegisteredWithImageId(String id, String imageId)` - Check for specific ID + imageId combination
-- **Docs**: Enhanced README with comprehensive registration management section
-  - Added detailed examples for registration status checks
-  - Included use cases for preventing duplicate registrations
-  - Updated feature list to highlight registration status capabilities
-  - Fixed iOS Podfile configuration syntax error
-  - Clarified `imageId` parameter as required (not optional)
-  - Added troubleshooting for "ID already exists" error
-- **Dependencies**: Updated example app dependencies
-  - `image_picker: ^1.2.0` (from ^1.1.2)
-  - Updated various transitive dependencies
-- **Dependencies**: Updated plugin dependencies
-  - `plugin_platform_interface: ^2.1.8` (from ^2.0.2) 
-  - `path_provider: ^2.1.5` (from ^2.1.4)
+* **Feature**: Added new registration status check functions
+
+  * `isFaceRegistered(String id)` - Check if a face is registered by ID
+  * `isFaceRegisteredWithImageId(String id, String imageId)` - Check for specific ID + imageId combination
+* **Docs**: Enhanced README with comprehensive registration management section
+
+  * Added detailed examples for registration status checks
+  * Included use cases for preventing duplicate registrations
+  * Updated feature list to highlight registration status capabilities
+  * Fixed iOS Podfile configuration syntax error
+  * Clarified `imageId` parameter as required (not optional)
+  * Added troubleshooting for "ID already exists" error
+* **Dependencies**: Updated example app dependencies
+
+  * `image_picker: ^1.2.0` (from ^1.1.2)
+  * Updated various transitive dependencies
+* **Dependencies**: Updated plugin dependencies
+
+  * `plugin_platform_interface: ^2.1.8` (from ^2.0.2)
+  * `path_provider: ^2.1.5` (from ^2.1.4)
 
 ## 0.0.5
 
-- Docs: Fixed repository URL in README issues section
+* Docs: Fixed repository URL in README issues section
 
 ## 0.0.4
 
-- Docs: Complete README overhaul with improved user experience
-  - Added clear value proposition and use cases upfront
-  - Enhanced step-by-step usage guide with practical examples
-  - Improved code snippets with real-world scenarios
-  - Added comprehensive troubleshooting section
-  - Better organized platform setup instructions
-  - Added tips for optimal photo quality and threshold tuning
-  - Improved formatting with emojis and visual hierarchy for better readability
+* Docs: Complete README overhaul with improved user experience
+
+  * Added clear value proposition and use cases upfront
+  * Enhanced step-by-step usage guide with practical examples
+  * Improved code snippets with real-world scenarios
+  * Added comprehensive troubleshooting section
+  * Better organized platform setup instructions
+  * Added tips for optimal photo quality and threshold tuning
+  * Improved formatting with emojis and visual hierarchy for better readability
 
 ## 0.0.3
 
-- Docs: sync install snippet to ^0.0.2
-- Metadata refresh to surface repository links on pub.dev
+* Docs: sync install snippet to ^0.0.2
+* Metadata refresh to surface repository links on pub.dev
 
 ## 0.0.2
 
-- Docs: revamped README (requirements, quick start, staffId behavior)
-- Metadata: added homepage/repository/issue_tracker
-- License: switched to MIT text
+* Docs: revamped README (requirements, quick start, staffId behavior)
+* Metadata: added homepage/repository/issue_tracker
+* License: switched to MIT text
 
 ## 0.0.1
 
-- Initial release with on-device face registration/verification, bundled model, and local storage
+* Initial release with on-device face registration/verification, bundled model, and local storage

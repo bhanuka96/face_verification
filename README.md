@@ -1,43 +1,41 @@
-# Face Verification — Simple Face Recognition for Flutter
+# Face Verification — Advanced On-Device Face Recognition for Flutter
 
-**Add secure face recognition to your Flutter app in minutes.** This plugin lets you register users' faces and verify their identity later — all processing happens on-device for privacy and works offline.
+**On-device, privacy-first face recognition for production-ready apps.**
+This plugin provides advanced face verification capabilities (powered by a FaceNet model) so you can register multiple face samples per user, verify identities reliably, and keep all processing offline.
 
-Perfect for attendance systems, secure login, user verification, and access control apps.
+Ideal for attendance systems, secure login, access control, KYC workflows, and other production scenarios where accuracy and privacy matter.
 
-## 🚀 What You Can Do
+---
 
-- **Register faces**: Take a photo and save someone's face profile
-- **Verify identity**: Check if a new photo matches any registered person
-- **Check registration status**: Verify if someone is already registered
-- **Works offline**: No internet required, all processing on-device
-- **Privacy-first**: Face data never leaves the device
-- **Simple API**: Just a few main functions to get started
+## 🔥 What's new (v0.0.7)
 
-## 📱 Quick Demo
+* ✅ **Multiple faces per user**: a single user ID can now have many face records (each with its own `imageId`).
+* ✅ **Optional `replace` flag on registration**: register with `replace: true` to replace an existing `id + imageId` entry.
+* ✅ **Verification checks all faces**: verification will compare against *all* faces for a given user (if `staffId` supplied) or against *all users*.
+* ✅ **List / count / delete per-user faces**: new management methods to enumerate and maintain user face samples.
+* ✅ **DB migration**: schema migrated to a composite primary key `(id, imageId)` and includes `createdAt` timestamp for each face record.
+* ✅ **Package bumped**: `0.0.7`
 
-```dart
-// 1. Initialize (do this once when your app starts)
-await FaceVerification.instance.init();
+---
 
-// 2. Register someone's face
-await FaceVerification.instance.registerFromImagePath(
-  id: 'john_doe',
-  imagePath: '/path/to/johns_photo.jpg',
-  imageId: 'profile_pic',
-);
+## 🧠 Model (FaceNet)
 
-// 3. Later, verify if a new photo matches John
-final matchId = await FaceVerification.instance.verifyFromImagePath(
-  imagePath: '/path/to/new_photo.jpg',
-  threshold: 0.70, // How strict the match should be (0-1)
-);
+This plugin uses a FaceNet embedding model by default:
+`models/facenet.tflite` — included with the package and used to compute face embeddings on-device.
 
-if (matchId == 'john_doe') {
-  print('Welcome back, John!');
-} else {
-  print('Face not recognized');
-}
-```
+If you want to use a different model, the plugin supports loading a custom TFLite model via `init(modelAsset: ...)` (see **Custom Model** below). The default FaceNet model is tuned for high-quality embeddings suitable for verification workflows.
+
+---
+
+## 🚀 Capabilities
+
+* Register multiple labeled face images per person (e.g., `profile_pic`, `work_id`, `passport_photo`)
+* Replace a particular face image for a person (via `replace` flag)
+* Verify a photo against a single person (all their faces) or against everyone
+* List, count, and delete face entries per user
+* All processing runs on-device (no internet), preserving privacy
+
+---
 
 ## 📦 Installation
 
@@ -45,245 +43,159 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.0.6
+  face_verification: ^0.0.7
 ```
 
 Run:
+
 ```bash
 flutter pub get
 ```
 
-That's it! The face recognition model is included automatically.
+---
 
-## 🛠️ Platform Setup
-
-### iOS Requirements
-- iOS 15.5 or newer
-- Xcode 15.3.0+
-
-Add this to your `ios/Podfile`:
-```ruby
-platform :ios, '15.5'
-
-post_install do |installer|
-  installer.pods_project.build_configurations.each do |config|
-    config.build_settings["EXCLUDED_ARCHS[sdk=*]"] = "armv7"
-    config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
-  end
-  
-  installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
-    target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
-    end
-  end
-end
-```
-
-### Android Requirements
-Update your `android/app/build.gradle`:
-```gradle
-android {
-    compileSdkVersion 35
-    
-    defaultConfig {
-        minSdkVersion 21
-        targetSdkVersion 35
-    }
-}
-```
-
-## 🎯 Complete Usage Guide
-
-### Step 1: Initialize the Plugin
-Do this once when your app starts, typically in `main()` or your first screen:
+## 📱 Quick Demo (updated)
 
 ```dart
-import 'package:face_verification/face_verification.dart';
+// 1. Initialize (do this once when your app starts)
+await FaceVerification.instance.init(); // uses models/facenet.tflite by default
 
-class MyApp extends StatefulWidget {
-  @override
-  _MyAppState createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  @override
-  void initState() {
-    super.initState();
-    _initializeFaceVerification();
-  }
-  
-  Future<void> _initializeFaceVerification() async {
-    try {
-      await FaceVerification.instance.init();
-      print('Face verification ready!');
-    } catch (e) {
-      print('Failed to initialize: $e');
-    }
-  }
-}
-```
-
-### Step 2: Register a Person's Face
-When someone needs to register (like employee onboarding or user signup):
-
-```dart
-Future<void> registerNewPerson(String personId, String photoPath) async {
-  try {
-    final result = await FaceVerification.instance.registerFromImagePath(
-      id: personId,           // Unique ID like 'employee_123' or 'user_john'
-      imagePath: photoPath,   // Path to their photo
-      imageId: 'main_photo',  // Required: label for this photo
-    );
-    
-    print('✅ Successfully registered: $result');
-    // Show success message to user
-    
-  } catch (e) {
-    print('❌ Registration failed: $e');
-    // Handle errors (no face detected, multiple faces, etc.)
-  }
-}
-```
-
-### Step 3: Verify Someone's Identity
-When someone tries to log in or access something:
-
-```dart
-Future<void> verifyPerson(String photoPath) async {
-  try {
-    final matchId = await FaceVerification.instance.verifyFromImagePath(
-      imagePath: photoPath,
-      threshold: 0.70,  // 0.70 = good balance, 0.80 = stricter, 0.60 = more lenient
-    );
-    
-    if (matchId != null) {
-      print('✅ Welcome back, $matchId!');
-      // Grant access or log them in
-    } else {
-      print('❌ Face not recognized');
-      // Show error or fallback to password
-    }
-    
-  } catch (e) {
-    print('❌ Verification failed: $e');
-  }
-}
-```
-
-### Step 4: Check Specific Person (Optional)
-If you want to verify against one specific person instead of everyone:
-
-```dart
-Future<void> verifySpecificPerson(String photoPath, String expectedPersonId) async {
-  final matchId = await FaceVerification.instance.verifyFromImagePath(
-    imagePath: photoPath,
-    threshold: 0.70,
-    staffId: expectedPersonId,  // Only check against this person
-  );
-  
-  if (matchId == expectedPersonId) {
-    print('✅ Identity confirmed for $expectedPersonId');
-  } else {
-    print('❌ Not a match for $expectedPersonId');
-  }
-}
-```
-
-## 🔧 Registration Status & Management Functions
-
-### Check Registration Status
-Before registering or to prevent duplicates:
-
-```dart
-// Check if someone is already registered by ID
-final isRegistered = await FaceVerification.instance.isFaceRegistered('john_doe');
-if (isRegistered) {
-  print('User john_doe is already registered');
-} else {
-  print('User john_doe is not registered yet');
-}
-
-// Check if specific ID + imageId combination exists
-final hasSpecificImage = await FaceVerification.instance.isFaceRegisteredWithImageId(
-  'john_doe', 
-  'profile_pic'
+// 2. Register multiple faces for one user
+await FaceVerification.instance.registerFromImagePath(
+  id: 'john_doe',
+  imagePath: '/path/to/john_profile.jpg',
+  imageId: 'profile_pic',
 );
-if (hasSpecificImage) {
-  print('Exact match found - same person with same image');
+
+await FaceVerification.instance.registerFromImagePath(
+  id: 'john_doe',
+  imagePath: '/path/to/john_work_id.jpg',
+  imageId: 'work_id',
+);
+
+// Replace an existing face image
+await FaceVerification.instance.registerFromImagePath(
+  id: 'john_doe',
+  imagePath: '/path/to/john_new_profile.jpg',
+  imageId: 'profile_pic',
+  replace: true,
+);
+
+// 3. Verify a new photo against everyone (returns matched user ID or null)
+final matchId = await FaceVerification.instance.verifyFromImagePath(
+  imagePath: '/path/to/new_photo.jpg',
+  threshold: 0.70,
+);
+
+if (matchId == 'john_doe') {
+  print('Welcome back, John!');
+} else {
+  print('Face not recognized');
 }
+
+// 4. Verify against a single user (checks all their registered faces)
+final matchForUser = await FaceVerification.instance.verifyFromImagePath(
+  imagePath: '/path/to/new_photo.jpg',
+  threshold: 0.70,
+  staffId: 'john_doe',
+);
 ```
 
-**Use cases for registration checks:**
-- Prevent duplicate registrations
-- Show appropriate UI (register vs re-register)
-- Validate before allowing re-registration
-- Check if user needs to register first
+---
 
-### Other Management Functions
+## 🎯 Full Usage & Management
+
+### Initialize
+
+Call once when your app starts:
 
 ```dart
-// List all registered people
-final records = await FaceVerification.instance.listRegisteredAsync();
-print('${records.length} people registered');
-
-// Remove someone's registration
-await FaceVerification.instance.deleteRecord('employee_123');
-
-// Clean up when app closes (optional)
-await FaceVerification.instance.dispose();
+await FaceVerification.instance.init(
+  // optional: modelAsset: 'assets/models/my_custom_facenet.tflite',
+  // optional: numThreads: 4
+);
 ```
 
-## ⚙️ Understanding the Threshold
+### Register a face (multiple per user)
 
-The `threshold` parameter controls how strict face matching is:
+```dart
+await FaceVerification.instance.registerFromImagePath(
+  id: 'employee_123',
+  imagePath: '/path/to/photo.jpg',
+  imageId: 'passport',     // unique per user
+  replace: false,          // optional
+);
+```
 
-- **0.60**: More lenient (might accept similar-looking people)
-- **0.70**: Balanced (recommended for most apps)
-- **0.80**: Strict (reduces false positives, might reject valid matches)
-- **0.90**: Very strict (use for high-security applications)
+### Verify
+
+* Without `staffId`: checks against *all users* and all their faces.
+* With `staffId`: checks only that user's registered faces.
+
+```dart
+final matchId = await FaceVerification.instance.verifyFromImagePath(
+  imagePath: photoPath,
+  threshold: 0.70,
+  staffId: null, // or specific id
+);
+```
+
+### Management API (examples)
+
+```dart
+final faces = await FaceVerification.instance.getFacesForUser('employee_123');
+final count = await FaceVerification.instance.getFacesCountForUser('employee_123');
+final isRegistered = await FaceVerification.instance.isFaceRegistered('employee_123');
+final hasSpecific = await FaceVerification.instance.isFaceRegisteredWithImageId('employee_123', 'passport');
+await FaceVerification.instance.deleteFace('employee_123', 'passport'); // delete one sample
+await FaceVerification.instance.deleteRecord('employee_123'); // delete all samples for user
+```
+
+---
+
+## ⚙️ Database migration notes
+
+* The plugin now stores multiple face rows per user using a composite primary key `(id, imageId)` and a `createdAt` timestamp for each record.
+* On upgrade to v0.0.7 the plugin runs a migration to preserve existing records where possible. If you rely on embedded data, test the upgrade process and back up data before updating in critical environments.
+
+---
 
 ## 📸 Tips for Best Results
 
-**Good photos:**
-- Clear, front-facing face
-- Good lighting
-- No sunglasses or masks
-- Single person in frame
+Good photos:
 
-**Avoid:**
-- Blurry images
-- Multiple faces
-- Very dark photos
-- Extreme angles
+* Clear, front-facing face
+* Even lighting (avoid harsh shadows)
+* No sunglasses or masks
+* Single person in frame
 
-## 🚨 Common Issues & Solutions
+Avoid:
 
-**"No face detected"**
-- Make sure photo has a clear, visible face
-- Check lighting and image quality
+* Blurry or low-resolution images
+* Multiple people in one registration image
+* Extreme angles
+
+---
+
+## 🚨 Troubleshooting (common cases)
+
+**"ID already exists"**
+
+* With multi-face support this only happens for the same `(id, imageId)`. Use a different `imageId` or `replace: true`.
 
 **"Multiple faces detected"**
-- Crop photo to show only one person
-- Use photos with single subjects
 
-**"ID already exists" error**
-- Check if user is already registered using `isFaceRegistered()`
-- Use different imageId for re-registration
-- Delete existing record first if needed
-
-**iOS build errors**
-- Make sure you excluded armv7 architecture as shown above
-- Test on physical device, not simulator
+* Supply an image with only the target person or crop the photo.
 
 **Low accuracy**
-- Adjust threshold value
-- Use higher quality photos
-- Re-register with better photos
+
+* Use higher-quality photos, adjust `threshold`, or add more samples per user.
+
+---
 
 ## 🎨 Custom Model (Advanced)
 
-Want to use your own face recognition model? 
+You can load your own TFLite model instead of the default `models/facenet.tflite`:
 
 ```dart
 await FaceVerification.instance.init(
@@ -292,34 +204,35 @@ await FaceVerification.instance.init(
 );
 ```
 
-Add the model to your `pubspec.yaml`:
-```yaml
-flutter:
-  assets:
-    - assets/models/my_custom_model.tflite
-```
+Add the model to your `pubspec.yaml` assets.
+
+---
 
 ## 📱 Example App
 
-Check out the complete working example in the `example/` folder:
+See the `example/` folder for a complete app demonstrating registration, verification, and management:
 
 ```bash
 cd example
 flutter run
 ```
 
+---
+
 ## 🆘 Need Help?
 
-Having issues? Please [open an issue](https://github.com/bhanuka96/face_verification/issues) with:
+Please [open an issue](https://github.com/bhanuka96/face_verification/issues) with:
 
-- Your platform (iOS/Android) and versions
-- Device model
-- Error messages
-- Sample code that isn't working
+* Platform (iOS/Android) & versions
+* Device model
+* Error messages & stack traces
+* Minimal reproducible example
+
+---
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License — see [LICENSE](LICENSE).
 
 ---
 

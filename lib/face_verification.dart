@@ -9,7 +9,7 @@ import 'src/services/tflite_embedder.dart';
 import 'src/utils/preprocess.dart';
 import 'src/services/verification.dart';
 
-/// High-level API for registration and verification.
+/// High-level API for registration and verification with multiple faces per user.
 class FaceVerification {
   static final FaceVerification instance = FaceVerification._internal();
 
@@ -21,44 +21,42 @@ class FaceVerification {
 
   bool _initialized = false;
 
-  /// Initialize Hive, open box, and load TFLite embedding model.
-  /// - [modelAsset] should point to a 112x112 face embedding model (e.g. facenet.tflite).
+  /// Initialize database and load TFLite embedding model.
   Future<void> init({String modelAsset = 'packages/face_verification/assets/models/facenet.tflite', int numThreads = 4}) async {
     if (_initialized) return;
-    await _store.init();
+    try {
+      await _store.init();
 
-    _embedder = TfliteEmbedder(modelAsset: modelAsset);
-    await _embedder.loadModel(numThreads: numThreads);
-    if (!_embedder.isLikelyEmbeddingModel()) {
-      throw Exception('Loaded model does not look like an embedding model.');
+      _embedder = TfliteEmbedder(modelAsset: modelAsset);
+      await _embedder.loadModel(numThreads: numThreads);
+      if (!_embedder.isLikelyEmbeddingModel()) {
+        throw Exception('Loaded model does not look like an embedding model.');
+      }
+      _initialized = true;
+    } catch (e) {
+      debugPrint('Error initializing FaceVerification: $e');
+      rethrow;
     }
-    _initialized = true;
   }
 
   /// Register a face from an image file path with mandatory user-provided ID.
+  /// Now supports multiple faces per user.
   /// Returns the provided ID if successful.
-  Future<String> registerFromImagePath({required String id, required String imagePath, required String imageId}) async {
+  Future<String> registerFromImagePath({required String id, required String imagePath, required String imageId, bool replace = true}) async {
     _ensureInitialized();
 
-    // Validate mandatory ID parameter
+    // Validate mandatory parameters
     if (id.trim().isEmpty) {
       throw ArgumentError('ID cannot be empty or null');
     }
-
-    // Validate image ID parameter
     if (imageId.trim().isEmpty) {
       throw ArgumentError('imageId cannot be empty or null');
     }
 
-    // Check if ID already exists
-    final existingRecord = await _store.getById(id);
+    // Check if this specific face (id + imageId) already exists
+    final existingRecord = await _store.getByUserIdAndImageId(id, imageId);
     if (existingRecord != null) {
-      // If imageId is the same, don't allow duplicate registration
-      if (existingRecord.imageId == imageId) {
-        throw Exception('A face record with ID "$id" and imageId "$imageId" already exists');
-      }
-      // If imageId is different, we'll proceed to update/re-register
-      debugPrint('Re-registering face for ID "$id" with new imageId "$imageId" (previous: "${existingRecord.imageId}")');
+      throw Exception('A face record with ID "$id" and imageId "$imageId" already exists.');
     }
 
     final inputImage = InputImage.fromFilePath(imagePath);
@@ -76,23 +74,29 @@ class FaceVerification {
     if (embedding.isEmpty) throw Exception('Failed to generate embedding');
 
     final record = FaceRecord(id, imageId, embedding);
-    await _store.upsert(record);
+    await _store.upsert(record, replace: replace);
+
+    final totalFaces = await _store.getFaceCountForUser(id);
+    final action = existingRecord != null ? "Replaced" : "Registered";
+    debugPrint('$action face for user "$id" with imageId "$imageId". Total faces for user: $totalFaces');
+
     return id;
   }
 
-  /// Verify a face image against stored embeddings. Returns best match or null.
+  /// Verify a face image against all stored embeddings for the user.
+  /// If staffId is provided, only compares against that user's faces.
+  /// If staffId is null, compares against all users' faces.
   Future<String?> verifyFromImagePath({required String imagePath, double threshold = 0.70, String? staffId}) async {
     _ensureInitialized();
-    List<FaceRecord> all = [];
+
+    List<FaceRecord> candidateRecords = [];
     if (staffId != null && staffId != 'null') {
-      final faceRec = await _store.getById(staffId);
-      if (faceRec != null) {
-        all.add(faceRec);
-      }
+      candidateRecords = await _store.getAllByUserId(staffId);
     } else {
-      all = await _store.listAll();
+      candidateRecords = await _store.listAll();
     }
-    if (all.isEmpty) return null;
+
+    if (candidateRecords.isEmpty) return null;
 
     final inputImage = InputImage.fromFilePath(imagePath);
     final faces = await _detector.detectFaces(inputImage);
@@ -100,11 +104,9 @@ class FaceVerification {
 
     final bytes = await File(imagePath).readAsBytes();
     double bestScore = -1.0;
-    String? id;
+    String? bestMatchId;
 
-    // final modelInput = await preprocessForModel(rawImageBytes: bytes, face: faces.first, inputSize: _embedder.getModelInputSize());
-    // final embedding = await _embedder.runModelOnPreprocessed(modelInput);
-    // if (embedding.isEmpty) return null;
+    // Generate embeddings for all detected faces in the input image
     final Map<Face, List<double>> faceEmbeddings = {};
     for (final face in faces) {
       final modelInput = await preprocessForModel(rawImageBytes: bytes, face: face, inputSize: _embedder.getModelInputSize());
@@ -112,55 +114,82 @@ class FaceVerification {
       if (emb.isNotEmpty) faceEmbeddings[face] = emb;
     }
 
-    for (final record in all) {
-      for (final embedding in faceEmbeddings.values) {
-        if (record.embedding.length == embedding.length) {
-          final score = cosineSimilarity(record.embedding, embedding);
+    // Compare against all stored face records
+    for (final record in candidateRecords) {
+      for (final inputEmbedding in faceEmbeddings.values) {
+        if (record.embedding.length == inputEmbedding.length) {
+          final score = cosineSimilarity(record.embedding, inputEmbedding);
           if (score > bestScore) {
             bestScore = score;
-            id = record.id;
+            bestMatchId = record.id;
           }
         }
       }
     }
-    log('Best Score: $bestScore, ID: $id, All:${all.length}');
-    if (id != null && bestScore >= threshold) {
-      return id;
+
+    log('Best Score: $bestScore, ID: $bestMatchId, Candidate records: ${candidateRecords.length}');
+
+    if (bestMatchId != null && bestScore >= threshold) {
+      return bestMatchId;
     }
     return null;
   }
 
-  /// Check if a face is registered by ID
-  /// Returns true if face is registered, false otherwise
+  /// Check if a user has any registered faces
   Future<bool> isFaceRegistered(String id) async {
     _ensureInitialized();
+    if (id.trim().isEmpty) return false;
 
-    if (id.trim().isEmpty) {
-      return false;
-    }
+    final faceCount = await _store.getFaceCountForUser(id);
+    return faceCount > 0;
+  }
 
-    final record = await _store.getById(id);
+  /// Check if a specific face (user ID + image ID combination) is registered
+  Future<bool> isFaceRegisteredWithImageId(String id, String imageId) async {
+    _ensureInitialized();
+    if (id.trim().isEmpty || imageId.trim().isEmpty) return false;
+
+    final record = await _store.getByUserIdAndImageId(id, imageId);
     return record != null;
   }
 
-  /// Check if a face is registered with specific ID and imageId combination
-  /// Returns true if exact match found, false otherwise
-  Future<bool> isFaceRegisteredWithImageId(String id, String imageId) async {
+  /// Get all registered faces for a specific user
+  Future<List<FaceRecord>> getFacesForUser(String userId) async {
     _ensureInitialized();
-
-    if (id.trim().isEmpty || imageId.trim().isEmpty) {
-      return false;
-    }
-    
-    final record = await _store.getById(id);
-    return record != null && record.imageId == imageId;
+    return _store.getAllByUserId(userId);
   }
 
+  /// Get count of registered faces for a user
+  Future<int> getFaceCountForUser(String userId) async {
+    _ensureInitialized();
+    return _store.getFaceCountForUser(userId);
+  }
+
+  /// Get all users who have registered faces
+  Future<List<String>> getAllRegisteredUsers() async {
+    _ensureInitialized();
+    return _store.getAllUserIds();
+  }
+
+  /// Legacy method for backward compatibility
   Future<List<FaceRecord>> listRegisteredAsync() async {
     _ensureInitialized();
     return _store.listAll();
   }
 
+  /// Delete a specific face record
+  Future<void> deleteFaceRecord(String userId, String imageId) async {
+    _ensureInitialized();
+    await _store.deleteByUserIdAndImageId(userId, imageId);
+  }
+
+  /// Delete all faces for a user
+  Future<void> deleteUserFaces(String userId) async {
+    _ensureInitialized();
+    await _store.deleteAllByUserId(userId);
+  }
+
+  /// Legacy delete method for backward compatibility
   Future<void> deleteRecord(String id) async {
     _ensureInitialized();
     await _store.delete(id);
