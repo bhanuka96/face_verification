@@ -1,3 +1,20 @@
+## 0.1.0
+
+* **Feature**: Group photo identification - identify ALL users in a single photo
+
+  * New method `identifyAllUsersFromImagePath()` - detects and identifies multiple faces in one image
+  * Returns `List<String>` of all matched user IDs (unique, deduplicated)
+  * Enables use cases: group attendance, event check-in, family photo tagging
+  * Each detected face is compared against all stored embeddings
+  * Works with configurable similarity threshold (default: 0.70)
+* **Example**: Updated demo app with "Identify Group Photo" feature
+
+  * New button to test multi-face identification
+  * Displays count and list of identified users
+  * Uses gallery picker for group photos
+* **API**: All existing methods remain backward-compatible
+* **Version**: Minor version bump (0.0.7 → 0.1.0) for significant new capability
+
 ## 0.0.7
 
 * **Feature**: Support multiple faces per user

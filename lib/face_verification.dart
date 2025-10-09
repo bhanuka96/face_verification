@@ -135,6 +135,55 @@ class FaceVerification {
     return null;
   }
 
+  /// Identify all users from a single photo containing multiple faces.
+  /// Returns a list of unique user IDs that match faces in the image.
+  /// Each detected face is compared against all stored embeddings.
+  Future<List<String>> identifyAllUsersFromImagePath({required String imagePath, double threshold = 0.70}) async {
+    _ensureInitialized();
+
+    final candidateRecords = await _store.listAll();
+    if (candidateRecords.isEmpty) return [];
+
+    final inputImage = InputImage.fromFilePath(imagePath);
+    final faces = await _detector.detectFaces(inputImage);
+    if (faces.isEmpty) return [];
+
+    final bytes = await File(imagePath).readAsBytes();
+    final Set<String> matchedUserIds = {};
+
+    // Generate embeddings for all detected faces in the input image
+    final List<List<double>> faceEmbeddings = [];
+    for (final face in faces) {
+      final modelInput = await preprocessForModel(rawImageBytes: bytes, face: face, inputSize: _embedder.getModelInputSize());
+      final emb = await _embedder.runModelOnPreprocessed(modelInput);
+      if (emb.isNotEmpty) faceEmbeddings.add(emb);
+    }
+
+    // For each detected face, find the best matching user
+    for (final inputEmbedding in faceEmbeddings) {
+      double bestScore = -1.0;
+      String? bestMatchId;
+
+      for (final record in candidateRecords) {
+        if (record.embedding.length == inputEmbedding.length) {
+          final score = cosineSimilarity(record.embedding, inputEmbedding);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatchId = record.id;
+          }
+        }
+      }
+
+      if (bestMatchId != null && bestScore >= threshold) {
+        matchedUserIds.add(bestMatchId);
+      }
+    }
+
+    log('Detected ${faces.length} faces, identified ${matchedUserIds.length} users: $matchedUserIds');
+
+    return matchedUserIds.toList();
+  }
+
   /// Check if a user has any registered faces
   Future<bool> isFaceRegistered(String id) async {
     _ensureInitialized();

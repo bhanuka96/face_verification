@@ -83,6 +83,27 @@ class _OfflineFacePageState extends State<OfflineFacePage> {
     }
   }
 
+  Future<void> _identifyGroup() async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.gallery);
+      if (picked == null) return;
+      setState(() => statusMessage = 'Identifying faces...');
+      final matches = await FaceVerification.instance.identifyAllUsersFromImagePath(imagePath: picked.path);
+      if (!mounted) return;
+      setState(() => statusMessage = null);
+      if (matches.isNotEmpty) {
+        _show('IDENTIFIED', 'Found ${matches.length} user(s):\n${matches.join('\n')}');
+      } else {
+        _show('NO MATCHES', 'No registered users found in the photo.');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => statusMessage = null);
+      _show('Error', 'Group identification failed: $e');
+    }
+  }
+
   void _show(String title, String msg) {
     showDialog(
       context: context,
@@ -138,18 +159,23 @@ class _OfflineFacePageState extends State<OfflineFacePage> {
               width: double.infinity,
               child: ElevatedButton.icon(onPressed: ready && _users.isNotEmpty ? _verify : null, icon: const Icon(Icons.face_6), label: const Text('Verify')),
             ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(onPressed: ready && _users.isNotEmpty ? _identifyGroup : null, icon: const Icon(Icons.groups), label: const Text('Identify Group Photo')),
+            ),
             const SizedBox(height: 24),
             Row(
               children: [
                 const Icon(Icons.people),
                 const SizedBox(width: 8),
-                Text('Registered Users (${users.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('Registered Faces (${users.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
             Expanded(
               child: users.isEmpty
-                  ? const Center(child: Text('No registered users'))
+                  ? const Center(child: Text('No registered faces'))
                   : ListView.builder(
                       itemCount: users.length,
                       itemBuilder: (_, i) {
@@ -157,12 +183,12 @@ class _OfflineFacePageState extends State<OfflineFacePage> {
                         return Card(
                           child: ListTile(
                             leading: const CircleAvatar(child: Icon(Icons.person)),
-                            title: Text(u.name),
-                            subtitle: Text('ID: ${u.id}  |  Emb: ${u.embedding.length}'),
+                            title: Text('User ID: ${u.id}'),
+                            subtitle: Text('Image: ${u.imageId}  |  Emb: ${u.embedding.length}  |  Created: ${u.createdAt.toString().substring(0, 19)}'),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () async {
-                                await FaceVerification.instance.deleteRecord(u.id);
+                                await FaceVerification.instance.deleteFaceRecord(u.id, u.imageId);
                                 final refreshed = await FaceVerification.instance.listRegisteredAsync();
                                 if (!mounted) return;
                                 setState(() {

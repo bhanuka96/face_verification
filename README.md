@@ -7,14 +7,15 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 
 ---
 
-## 🔥 What's new (v0.0.7)
+## 🔥 What's new (v0.1.0)
 
-* ✅ **Multiple faces per user**: a single user ID can now have many face records (each with its own `imageId`).
-* ✅ **Optional `replace` flag on registration**: register with `replace: true` to replace an existing `id + imageId` entry.
-* ✅ **Verification checks all faces**: verification will compare against *all* faces for a given user (if `staffId` supplied) or against *all users*.
-* ✅ **List / count / delete per-user faces**: new management methods to enumerate and maintain user face samples.
-* ✅ **DB migration**: schema migrated to a composite primary key `(id, imageId)` and includes `createdAt` timestamp for each face record.
-* ✅ **Package bumped**: `0.0.7`
+* ✅ **Group photo identification**: NEW `identifyAllUsersFromImagePath()` method identifies ALL users in a single photo with multiple faces.
+* ✅ **Multi-face detection**: Automatically detects and processes every face in the image.
+* ✅ **Batch identification**: Returns a list of all matched user IDs in one call.
+* ✅ **Real-world use cases**: Perfect for group attendance, event check-in, family photo tagging, and multi-person scenarios.
+* ✅ **Backward compatible**: All existing methods work unchanged.
+* ✅ **Updated example app**: New "Identify Group Photo" demo button.
+* ✅ **Package bumped**: `0.1.0`
 
 ---
 
@@ -32,6 +33,7 @@ If you want to use a different model, the plugin supports loading a custom TFLit
 * Register multiple labeled face images per person (e.g., `profile_pic`, `work_id`, `passport_photo`)
 * Replace a particular face image for a person (via `replace` flag)
 * Verify a photo against a single person (all their faces) or against everyone
+* **NEW: Identify ALL users in a group photo** - detect and recognize multiple people at once
 * List, count, and delete face entries per user
 * All processing runs on-device (no internet), preserving privacy
 
@@ -43,7 +45,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.0.7
+  face_verification: ^0.1.0
 ```
 
 Run:
@@ -68,8 +70,8 @@ await FaceVerification.instance.registerFromImagePath(
 );
 
 await FaceVerification.instance.registerFromImagePath(
-  id: 'john_doe',
-  imagePath: '/path/to/john_work_id.jpg',
+  id: 'jane_smith',
+  imagePath: '/path/to/jane_work_id.jpg',
   imageId: 'work_id',
 );
 
@@ -93,12 +95,14 @@ if (matchId == 'john_doe') {
   print('Face not recognized');
 }
 
-// 4. Verify against a single user (checks all their registered faces)
-final matchForUser = await FaceVerification.instance.verifyFromImagePath(
-  imagePath: '/path/to/new_photo.jpg',
+// 4. NEW: Identify ALL users in a group photo
+final identifiedUsers = await FaceVerification.instance.identifyAllUsersFromImagePath(
+  imagePath: '/path/to/group_photo.jpg',
   threshold: 0.70,
-  staffId: 'john_doe',
 );
+
+print('Found ${identifiedUsers.length} users: $identifiedUsers');
+// Output: Found 2 users: [john_doe, jane_smith]
 ```
 
 ---
@@ -139,6 +143,28 @@ final matchId = await FaceVerification.instance.verifyFromImagePath(
   staffId: null, // or specific id
 );
 ```
+
+### Group Photo Identification (NEW in v0.1.0)
+
+Identify **all users** in a single photo containing multiple faces:
+
+```dart
+final identifiedUsers = await FaceVerification.instance.identifyAllUsersFromImagePath(
+  imagePath: '/path/to/group_photo.jpg',
+  threshold: 0.70,
+);
+
+// Returns List<String> of all matched user IDs
+// Example: ['alice', 'bob', 'charlie']
+// Empty list if no matches found
+```
+
+**Use cases:**
+* Group attendance marking
+* Event check-in (identify all attendees at once)
+* Family photo tagging
+* Multi-person access control
+* Classroom or workplace monitoring
 
 ### Management API (examples)
 
