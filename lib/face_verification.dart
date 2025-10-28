@@ -184,6 +184,138 @@ class FaceVerification {
     return matchedUserIds.toList();
   }
 
+  /// Register a face from a pre-computed embedding (e.g., from server).
+  /// Skips if the face record (id + imageId) already exists.
+  ///
+  /// Returns a map with:
+  /// - 'success': bool
+  /// - 'message': String (description of what happened)
+  /// - 'id': String? (user ID if successful)
+  /// - 'imageId': String? (image ID if successful)
+  Future<Map<String, dynamic>> registerFromEmbedding({
+    required String id,
+    required String imageId,
+    required List<double> embedding,
+  }) async {
+    _ensureInitialized();
+
+    // Validate parameters
+    if (id.trim().isEmpty) {
+      return {
+        'success': false,
+        'message': 'ID cannot be empty',
+        'id': null,
+        'imageId': null,
+      };
+    }
+
+    if (imageId.trim().isEmpty) {
+      return {
+        'success': false,
+        'message': 'imageId cannot be empty',
+        'id': null,
+        'imageId': null,
+      };
+    }
+
+    // Validate embedding size
+    if (embedding.length != 512) {
+      return {
+        'success': false,
+        'message': 'Invalid embedding size: ${embedding.length} (expected 512)',
+        'id': null,
+        'imageId': null,
+      };
+    }
+
+    // Check if already exists
+    final existing = await _store.getByUserIdAndImageId(id, imageId);
+    if (existing != null) {
+      return {
+        'success': false,
+        'message': 'Face record already exists (skipped)',
+        'id': id,
+        'imageId': imageId,
+      };
+    }
+
+    // Create and insert record
+    final record = FaceRecord(id, imageId, embedding);
+    await _store.upsert(record, replace: false);
+
+    final totalFaces = await _store.getFaceCountForUser(id);
+    debugPrint('✓ Registered embedding for user "$id" with imageId "$imageId". Total faces: $totalFaces');
+
+    return {
+      'success': true,
+      'message': 'Successfully registered',
+      'id': id,
+      'imageId': imageId,
+    };
+  }
+
+  /// Register multiple faces from pre-computed embeddings (batch operation).
+  /// Each item in embeddingsData should contain:
+  /// - 'staff_id': int or String (user ID)
+  /// - 's3_key': String (image identifier)
+  /// - 'embedding': List<dynamic> (512 floats)
+  ///
+  /// Returns a list of results for each embedding with:
+  /// - 'success': bool
+  /// - 'message': String
+  /// - 'id': String?
+  /// - 'imageId': String?
+  Future<List<Map<String, dynamic>>> registerFromEmbeddingsBatch({
+    required List<Map<String, dynamic>> embeddingsData,
+  }) async {
+    _ensureInitialized();
+
+    final results = <Map<String, dynamic>>[];
+
+    for (final item in embeddingsData) {
+      try {
+        // Extract and convert data
+        final staffId = item['staff_id']?.toString() ?? '';
+        final s3Key = item['s3_key']?.toString() ?? '';
+        final embeddingRaw = item['embedding'] as List?;
+
+        if (embeddingRaw == null) {
+          results.add({
+            'success': false,
+            'message': 'Missing embedding data',
+            'id': staffId.isEmpty ? null : staffId,
+            'imageId': s3Key.isEmpty ? null : s3Key,
+          });
+          continue;
+        }
+
+        // Convert to List<double>
+        final embedding = embeddingRaw.map((e) => (e as num).toDouble()).toList();
+
+        // Register single embedding
+        final result = await registerFromEmbedding(
+          id: staffId,
+          imageId: s3Key,
+          embedding: embedding,
+        );
+
+        results.add(result);
+      } catch (e) {
+        results.add({
+          'success': false,
+          'message': 'Error: ${e.toString()}',
+          'id': item['staff_id']?.toString(),
+          'imageId': item['s3_key']?.toString(),
+        });
+      }
+    }
+
+    final successCount = results.where((r) => r['success'] == true).length;
+    debugPrint('✅ Batch registration complete: $successCount/${results.length} successful');
+
+    return results;
+  }
+
   /// Check if a user has any registered faces
   Future<bool> isFaceRegistered(String id) async {
     _ensureInitialized();

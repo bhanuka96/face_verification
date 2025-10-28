@@ -14,8 +14,7 @@ dependencies:
     sdk: flutter
   plugin_platform_interface: ^2.1.8
   google_mlkit_face_detection: ^0.13.1
-  tflite_flutter: ^0.11.0
-    # path: '/Users/bhanukaisuru/Documents/REBORN/flutter-tflite'
+  tflite_flutter: ^0.12.0
   path: ^1.9.1
   image: ^4.5.4
   sqflite: ^2.4.2
