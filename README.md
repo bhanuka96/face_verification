@@ -9,12 +9,14 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 
 ## 🔥 What's new (v0.1.0)
 
+* ✅ **Server-side embeddings**: NEW `registerFromEmbedding()` and `registerFromEmbeddingsBatch()` for registering pre-computed embeddings from server.
+* ✅ **Performance optimization**: Offload embedding generation to server for batch registration (20-50+ faces per user).
 * ✅ **Group photo identification**: NEW `identifyAllUsersFromImagePath()` method identifies ALL users in a single photo with multiple faces.
 * ✅ **Multi-face detection**: Automatically detects and processes every face in the image.
 * ✅ **Batch identification**: Returns a list of all matched user IDs in one call.
+* ✅ **tflite_flutter 0.12.0**: Updated dependency for better compatibility.
 * ✅ **Real-world use cases**: Perfect for group attendance, event check-in, family photo tagging, and multi-person scenarios.
 * ✅ **Backward compatible**: All existing methods work unchanged.
-* ✅ **Updated example app**: New "Identify Group Photo" demo button.
 * ✅ **Package bumped**: `0.1.0`
 
 ---
@@ -31,6 +33,7 @@ If you want to use a different model, the plugin supports loading a custom TFLit
 ## 🚀 Capabilities
 
 * Register multiple labeled face images per person (e.g., `profile_pic`, `work_id`, `passport_photo`)
+* **NEW: Register from server-side embeddings** - batch register 20-50+ faces efficiently
 * Replace a particular face image for a person (via `replace` flag)
 * Verify a photo against a single person (all their faces) or against everyone
 * **NEW: Identify ALL users in a group photo** - detect and recognize multiple people at once
@@ -165,6 +168,46 @@ final identifiedUsers = await FaceVerification.instance.identifyAllUsersFromImag
 * Family photo tagging
 * Multi-person access control
 * Classroom or workplace monitoring
+
+### Server-Side Embedding Registration (NEW in v0.1.0)
+
+Register pre-computed embeddings from your server for better performance with large datasets:
+
+**Single embedding:**
+```dart
+final result = await FaceVerification.instance.registerFromEmbedding(
+  id: '123',
+  imageId: 'staffs/123/photo/profile.jpg',
+  embedding: [0.123, -0.456, ...], // 512 floats from your API
+);
+
+if (result['success']) {
+  print('Registered: ${result['id']}');
+} else {
+  print('Failed: ${result['message']}');
+}
+```
+
+**Batch registration (20-50+ faces):**
+```dart
+// Direct from API response
+final apiResponse = await http.post(yourApiUrl);
+final jsonData = jsonDecode(apiResponse.body);
+
+final results = await FaceVerification.instance.registerFromEmbeddingsBatch(
+  embeddingsData: List<Map<String, dynamic>>.from(jsonData['data']),
+);
+
+// Check results
+final successCount = results.where((r) => r['success'] == true).length;
+print('Registered $successCount/${results.length} faces');
+```
+
+**Use cases:**
+* Batch onboarding (register 20-50 employee photos at once)
+* Server-side preprocessing for performance
+* Sync embeddings from cloud storage
+* Reduce mobile device processing load
 
 ### Management API (examples)
 
