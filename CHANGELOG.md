@@ -1,4 +1,4 @@
-## 0.1.0
+## 0.1.1
 
 * **Feature**: Server-side embedding registration support
 
@@ -22,7 +22,7 @@
   * Displays count and list of identified users
   * Uses gallery picker for group photos
 * **API**: All existing methods remain backward-compatible
-* **Version**: Minor version bump (0.0.7 → 0.1.0) for significant new capabilities
+* **Version**: Minor version bump (0.0.7 → 0.1.1) for significant new capabilities
 
 ## 0.0.7
 
