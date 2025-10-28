@@ -1,3 +1,7 @@
+## 0.2.1
+
+* **Update**: Upgraded tflite_flutter to 0.12.1 for improved compatibility
+
 ## 0.2.0
 
 * **Feature**: Server-side embedding registration support

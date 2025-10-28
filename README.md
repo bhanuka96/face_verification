@@ -7,13 +7,13 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 
 ---
 
-## 🔥 What's new (v0.2.0)
+## 🔥 What's new (v0.2.1)
 
-* ✅ **Server-side embeddings**: NEW `registerFromEmbedding()` and `registerFromEmbeddingsBatch()` for registering pre-computed embeddings from server.
+* ✅ **Server-side embeddings**: NEW `registerFromEmbedding()` and `registerFromEmbeddingsBatch()` for registering pre-computed embeddings from server (v0.2.0).
 * ✅ **Performance optimization**: Offload embedding generation to server for batch registration (20-50+ faces per user).
 * ✅ **Efficient sync**: Skip duplicates automatically, validate embedding size (512 dimensions).
 * ✅ **Detailed results**: Track success/failure per embedding with detailed response.
-* ✅ **tflite_flutter 0.12.0**: Updated dependency for better compatibility.
+* ✅ **tflite_flutter 0.12.1**: Updated dependency for improved compatibility.
 * ✅ **Backward compatible**: All existing methods work unchanged including group photo identification from v0.1.0.
 
 ---
@@ -45,7 +45,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.2.0
+  face_verification: ^0.2.1
 ```
 
 Run:
