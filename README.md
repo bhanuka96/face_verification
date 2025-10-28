@@ -7,17 +7,14 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 
 ---
 
-## 🔥 What's new (v0.1.1)
+## 🔥 What's new (v0.2.0)
 
 * ✅ **Server-side embeddings**: NEW `registerFromEmbedding()` and `registerFromEmbeddingsBatch()` for registering pre-computed embeddings from server.
 * ✅ **Performance optimization**: Offload embedding generation to server for batch registration (20-50+ faces per user).
-* ✅ **Group photo identification**: NEW `identifyAllUsersFromImagePath()` method identifies ALL users in a single photo with multiple faces.
-* ✅ **Multi-face detection**: Automatically detects and processes every face in the image.
-* ✅ **Batch identification**: Returns a list of all matched user IDs in one call.
+* ✅ **Efficient sync**: Skip duplicates automatically, validate embedding size (512 dimensions).
+* ✅ **Detailed results**: Track success/failure per embedding with detailed response.
 * ✅ **tflite_flutter 0.12.0**: Updated dependency for better compatibility.
-* ✅ **Real-world use cases**: Perfect for group attendance, event check-in, family photo tagging, and multi-person scenarios.
-* ✅ **Backward compatible**: All existing methods work unchanged.
-* ✅ **Package bumped**: `0.1.1`
+* ✅ **Backward compatible**: All existing methods work unchanged including group photo identification from v0.1.0.
 
 ---
 
@@ -48,7 +45,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.1.1
+  face_verification: ^0.2.0
 ```
 
 Run:
@@ -147,7 +144,7 @@ final matchId = await FaceVerification.instance.verifyFromImagePath(
 );
 ```
 
-### Group Photo Identification (NEW in v0.1.1)
+### Group Photo Identification (added in v0.1.0)
 
 Identify **all users** in a single photo containing multiple faces:
 
@@ -169,7 +166,7 @@ final identifiedUsers = await FaceVerification.instance.identifyAllUsersFromImag
 * Multi-person access control
 * Classroom or workplace monitoring
 
-### Server-Side Embedding Registration (NEW in v0.1.1)
+### Server-Side Embedding Registration (NEW in v0.2.0)
 
 Register pre-computed embeddings from your server for better performance with large datasets:
 

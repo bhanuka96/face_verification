@@ -1,4 +1,4 @@
-## 0.1.1
+## 0.2.0
 
 * **Feature**: Server-side embedding registration support
 
@@ -8,6 +8,11 @@
   * Validates embedding size (512 dimensions required)
   * Skips duplicates automatically (existing records preserved)
   * Returns detailed results for tracking success/failure per embedding
+* **Update**: Upgraded tflite_flutter to 0.12.0 for improved compatibility
+* **API**: All existing methods remain backward-compatible
+
+## 0.1.0
+
 * **Feature**: Group photo identification - identify ALL users in a single photo
 
   * New method `identifyAllUsersFromImagePath()` - detects and identifies multiple faces in one image
@@ -15,14 +20,13 @@
   * Enables use cases: group attendance, event check-in, family photo tagging
   * Each detected face is compared against all stored embeddings
   * Works with configurable similarity threshold (default: 0.70)
-* **Update**: Upgraded tflite_flutter to 0.12.0 for improved compatibility
 * **Example**: Updated demo app with "Identify Group Photo" feature
 
   * New button to test multi-face identification
   * Displays count and list of identified users
   * Uses gallery picker for group photos
 * **API**: All existing methods remain backward-compatible
-* **Version**: Minor version bump (0.0.7 → 0.1.1) for significant new capabilities
+* **Version**: Minor version bump (0.0.7 → 0.1.0) for significant new capability
 
 ## 0.0.7
 
