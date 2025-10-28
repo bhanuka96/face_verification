@@ -7,7 +7,7 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 
 ---
 
-## 🔥 What's new (v0.1.0)
+## 🔥 What's new (v0.1.1)
 
 * ✅ **Server-side embeddings**: NEW `registerFromEmbedding()` and `registerFromEmbeddingsBatch()` for registering pre-computed embeddings from server.
 * ✅ **Performance optimization**: Offload embedding generation to server for batch registration (20-50+ faces per user).
@@ -17,7 +17,7 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 * ✅ **tflite_flutter 0.12.0**: Updated dependency for better compatibility.
 * ✅ **Real-world use cases**: Perfect for group attendance, event check-in, family photo tagging, and multi-person scenarios.
 * ✅ **Backward compatible**: All existing methods work unchanged.
-* ✅ **Package bumped**: `0.1.0`
+* ✅ **Package bumped**: `0.1.1`
 
 ---
 
@@ -48,7 +48,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.1.0
+  face_verification: ^0.1.1
 ```
 
 Run:
@@ -147,7 +147,7 @@ final matchId = await FaceVerification.instance.verifyFromImagePath(
 );
 ```
 
-### Group Photo Identification (NEW in v0.1.0)
+### Group Photo Identification (NEW in v0.1.1)
 
 Identify **all users** in a single photo containing multiple faces:
 
@@ -169,7 +169,7 @@ final identifiedUsers = await FaceVerification.instance.identifyAllUsersFromImag
 * Multi-person access control
 * Classroom or workplace monitoring
 
-### Server-Side Embedding Registration (NEW in v0.1.0)
+### Server-Side Embedding Registration (NEW in v0.1.1)
 
 Register pre-computed embeddings from your server for better performance with large datasets:
 
