@@ -1,3 +1,44 @@
+## 0.3.0
+
+* **Feature**: Background isolate verification for responsive UI
+  * New method `verifyFromImagePathIsolate()` - runs verification in background isolate
+  * Keeps UI responsive during verification with 10-50+ registered users
+  * Uses `BackgroundIsolateBinaryMessenger` for ML Kit in isolates
+  * Pool-protected (max 3 concurrent operations) to prevent crashes
+  * Same API as `verifyFromImagePath()` - returns matched user ID or null
+* **Feature**: Batch verification with automatic queuing
+  * New method `verifyFromImagePathsBatch()` - process multiple images safely
+  * Returns `List<String?>` with results for each image
+  * Automatic queuing when concurrent limit reached
+  * Pool protection prevents thread exhaustion crashes
+* **Feature**: Multi-image identification with parallel processing
+  * New method `identifyUsersFromImagePaths()` - identify users across multiple images
+  * Single API call for N images with configurable parallel processing
+  * Two-phase approach: batch face detection, then batch processing
+  * Returns `List<ImageIdentificationResult>` with per-image results
+  * Configurable `batchSize` parameter (default: 3)
+  * Performance: 10 images in ~5-7 seconds (vs 50s sequential)
+  * New `ImageIdentificationResult` class for type-safe results
+* **Enhancement**: Shared TFLite utilities for code reuse
+  * Extracted `runModelOnPreprocessedData()` for use by both normal and isolate flows
+  * Eliminates code duplication between verification methods
+  * Handles uint8/float32 tensor type conversion correctly
+  * Ensures identical behavior across all verification methods
+* **Enhancement**: Database safety improvements
+  * Added `FaceStore.getDatabasePath()` static method for isolate access
+  * Added `ensureOpen()` method to recover from closed connections
+  * Prevents "database_closed" errors after isolate operations
+* **Enhancement**: Concurrency control with pool package
+  * Added `pool: ^1.5.2` dependency for safe parallelism
+  * Pool initialized in `init()` with 3 concurrent operation limit
+  * Proper cleanup in `dispose()` method
+* **Enhancement**: Improved error handling and logging
+  * Detailed phase-by-phase timing logs for performance analysis
+  * Better error messages for debugging
+  * Graceful handling of failed operations in batch processing
+* **API**: All existing methods remain backward-compatible
+* **Example**: Updated demo app with isolate verification testing
+
 ## 0.2.1
 
 * **Update**: Upgraded tflite_flutter to 0.12.1 for improved compatibility

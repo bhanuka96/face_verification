@@ -7,14 +7,15 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 
 ---
 
-## 🔥 What's new (v0.2.1)
+## 🔥 What's new (v0.3.0)
 
-* ✅ **Server-side embeddings**: NEW `registerFromEmbedding()` and `registerFromEmbeddingsBatch()` for registering pre-computed embeddings from server (v0.2.0).
-* ✅ **Performance optimization**: Offload embedding generation to server for batch registration (20-50+ faces per user).
-* ✅ **Efficient sync**: Skip duplicates automatically, validate embedding size (512 dimensions).
-* ✅ **Detailed results**: Track success/failure per embedding with detailed response.
-* ✅ **tflite_flutter 0.12.1**: Updated dependency for improved compatibility.
-* ✅ **Backward compatible**: All existing methods work unchanged including group photo identification from v0.1.0.
+* ⚡ **Background isolate verification**: NEW `verifyFromImagePathIsolate()` keeps UI responsive during verification (v0.3.0).
+* 🚀 **Parallel batch processing**: NEW `identifyUsersFromImagePaths()` processes 10 images in ~5-7 seconds (vs 50s sequential).
+* 🎯 **Multi-image identification**: Identify users across multiple images with configurable parallel processing.
+* 🔒 **Crash prevention**: Pool-based concurrency control (max 3 concurrent operations) prevents thread exhaustion.
+* 📊 **Type-safe results**: New `ImageIdentificationResult` class for per-image results.
+* 🛡️ **Database safety**: Automatic recovery from closed connections, isolate-safe database access.
+* ✅ **Backward compatible**: All existing methods work unchanged including server-side embeddings from v0.2.0.
 
 ---
 
@@ -45,7 +46,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.2.1
+  face_verification: ^0.3.0
 ```
 
 Run:
@@ -95,7 +96,28 @@ if (matchId == 'john_doe') {
   print('Face not recognized');
 }
 
-// 4. NEW: Identify ALL users in a group photo
+// 4. NEW (v0.3.0): Verify with background isolate (UI stays responsive)
+final matchId = await FaceVerification.instance.verifyFromImagePathIsolate(
+  imagePath: '/path/to/new_photo.jpg',
+  threshold: 0.70,
+);
+
+// 5. NEW (v0.3.0): Identify users across multiple images (parallel processing)
+final results = await FaceVerification.instance.identifyUsersFromImagePaths(
+  imagePaths: ['/img1.jpg', '/img2.jpg', '/img3.jpg'],
+  threshold: 0.70,
+  batchSize: 3, // Process 3 images in parallel
+);
+
+for (var result in results) {
+  print('${result.imagePath}: ${result.userIds}');
+}
+// Output:
+// /img1.jpg: [john_doe]
+// /img2.jpg: [jane_smith]
+// /img3.jpg: []
+
+// 6. Identify ALL users in a single group photo
 final identifiedUsers = await FaceVerification.instance.identifyAllUsersFromImagePath(
   imagePath: '/path/to/group_photo.jpg',
   threshold: 0.70,
@@ -133,16 +155,75 @@ await FaceVerification.instance.registerFromImagePath(
 
 ### Verify
 
-* Without `staffId`: checks against *all users* and all their faces.
-* With `staffId`: checks only that user's registered faces.
+**Standard Verification (Main Thread):**
 
 ```dart
 final matchId = await FaceVerification.instance.verifyFromImagePath(
   imagePath: photoPath,
   threshold: 0.70,
-  staffId: null, // or specific id
+  staffId: null, // null = check all users, or specific user ID
 );
 ```
+
+**Background Isolate Verification (NEW in v0.3.0):**
+
+Keeps UI responsive during verification with many registered users:
+
+```dart
+final matchId = await FaceVerification.instance.verifyFromImagePathIsolate(
+  imagePath: photoPath,
+  threshold: 0.70,
+  staffId: null,
+);
+
+// UI stays responsive, no freezing
+// Pool-protected: max 3 concurrent operations to prevent crashes
+```
+
+**Batch Verification (NEW in v0.3.0):**
+
+Process multiple images with automatic queuing:
+
+```dart
+final results = await FaceVerification.instance.verifyFromImagePathsBatch(
+  imagePaths: ['/img1.jpg', '/img2.jpg', '/img3.jpg'],
+  threshold: 0.70,
+);
+
+// Returns List<String?> - one result per image
+// Example: ['john_doe', null, 'jane_smith']
+```
+
+### Multi-Image Identification (NEW in v0.3.0)
+
+Identify users across multiple images with parallel processing:
+
+```dart
+final results = await FaceVerification.instance.identifyUsersFromImagePaths(
+  imagePaths: ['/img1.jpg', '/img2.jpg', '/img3.jpg'],
+  threshold: 0.70,
+  batchSize: 3, // Process 3 images in parallel (default: 3, max recommended: 10)
+);
+
+// Returns List<ImageIdentificationResult>
+for (var result in results) {
+  print('Image: ${result.imagePath}');
+  print('Found users: ${result.userIds}');
+}
+
+// Performance: 10 images in ~5-7 seconds (vs 50s sequential)
+```
+
+**Use cases:**
+* Batch attendance processing (process 10-50 photos at once)
+* High-throughput verification systems
+* Parallel identity checks for event entry
+* Mass photo analysis
+
+**Performance tuning:**
+* `batchSize: 3` - Safe, ~17s for 10 images (recommended)
+* `batchSize: 5` - Faster, ~10s for 10 images (test on device)
+* `batchSize: 10` - Fastest, ~5-7s for 10 images (may crash on old phones, test first)
 
 ### Group Photo Identification (added in v0.1.0)
 

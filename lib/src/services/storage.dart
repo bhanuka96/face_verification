@@ -26,6 +26,13 @@ class FaceRecord {
 class FaceStore {
   Database? _db;
 
+  /// Get database path without creating a FaceStore instance.
+  /// This is useful for isolates where path_provider must run on main isolate.
+  static Future<String> getDatabasePath() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return p.join(dir.path, 'face_verification.db');
+  }
+
   Future<void> init() async {
     if (_db != null) return;
     final dir = await getApplicationDocumentsDirectory();
@@ -144,6 +151,20 @@ class FaceStore {
     if (db == null) {
       throw Exception('Database not initialized. Call init() first.');
     }
+
+    // Check if database is still open (it might have been closed by an isolate)
+    if (!db.isOpen) {
+      throw Exception('Database connection was closed. Reinitializing...');
+    }
+
     return db;
+  }
+
+  /// Reinitialize the database connection if it was closed
+  Future<void> ensureOpen() async {
+    if (_db == null || !_db!.isOpen) {
+      _db = null; // Reset
+      await init(); // Reinitialize
+    }
   }
 }

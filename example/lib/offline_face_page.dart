@@ -67,19 +67,50 @@ class _OfflineFacePageState extends State<OfflineFacePage> {
       final picker = ImagePicker();
       final picked = await picker.pickImage(source: ImageSource.camera);
       if (picked == null) return;
-      setState(() => statusMessage = 'Verifying...');
+      setState(() => statusMessage = 'Verifying (Normal)...');
+
+      final stopwatch = Stopwatch()..start();
       final match = await FaceVerification.instance.verifyFromImagePath(imagePath: picked.path);
+      stopwatch.stop();
+
       if (!mounted) return;
       setState(() => statusMessage = null);
+
       if (match != null) {
-        _show('MATCH', 'Matched: $match');
+        _show('MATCH (Normal)', 'Matched: $match\n\nTime: ${stopwatch.elapsedMilliseconds}ms');
       } else {
-        _show('NO MATCH', 'No user matched.');
+        _show('NO MATCH (Normal)', 'No user matched.\n\nTime: ${stopwatch.elapsedMilliseconds}ms');
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => statusMessage = null);
       _show('Error', 'Verification failed: $e');
+    }
+  }
+
+  Future<void> _verifyIsolate() async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.camera);
+      if (picked == null) return;
+      setState(() => statusMessage = 'Verifying (Isolate)...');
+
+      final stopwatch = Stopwatch()..start();
+      final match = await FaceVerification.instance.verifyFromImagePathIsolate(imagePath: picked.path);
+      stopwatch.stop();
+
+      if (!mounted) return;
+      setState(() => statusMessage = null);
+
+      if (match != null) {
+        _show('MATCH (Isolate)', 'Matched: $match\n\nTime: ${stopwatch.elapsedMilliseconds}ms\n\n✅ Ran in background isolate\n✅ UI stayed responsive');
+      } else {
+        _show('NO MATCH (Isolate)', 'No user matched.\n\nTime: ${stopwatch.elapsedMilliseconds}ms\n\n✅ Ran in background isolate\n✅ UI stayed responsive');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => statusMessage = null);
+      _show('Error', 'Isolate verification failed: $e');
     }
   }
 
@@ -157,7 +188,17 @@ class _OfflineFacePageState extends State<OfflineFacePage> {
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(onPressed: ready && _users.isNotEmpty ? _verify : null, icon: const Icon(Icons.face_6), label: const Text('Verify')),
+              child: ElevatedButton.icon(onPressed: ready && _users.isNotEmpty ? _verify : null, icon: const Icon(Icons.face_6), label: const Text('Verify (Normal)')),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: ready && _users.isNotEmpty ? _verifyIsolate : null,
+                icon: const Icon(Icons.offline_bolt),
+                label: const Text('Verify (Background Isolate)'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              ),
             ),
             const SizedBox(height: 12),
             SizedBox(
