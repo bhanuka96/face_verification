@@ -22,7 +22,7 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 ## Model (FaceNet)
 
 This plugin uses a FaceNet embedding model by default:
-`models/facenet.tflite` — included with the package and used to compute face embeddings on-device.
+`models/facenet.tflite` included with the package and used to compute face embeddings on-device.
 
 If you want to use a different model, the plugin supports loading a custom TFLite model via `init(modelAsset: ...)` (see **Custom Model** below). The default FaceNet model is tuned for high-quality embeddings suitable for verification workflows.
 
@@ -379,7 +379,7 @@ Please [open an issue](https://github.com/bhanuka96/face_verification/issues) wi
 
 ## License
 
-MIT License — see [LICENSE](LICENSE).
+MIT License [LICENSE](LICENSE).
 
 ---
 
