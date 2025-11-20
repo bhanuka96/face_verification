@@ -1,4 +1,4 @@
-# Face Verification — Advanced On-Device Face Recognition for Flutter
+# Face Verification : Advanced On-Device Face Recognition for Flutter
 
 **On-device, privacy-first face recognition for production-ready apps.**
 This plugin provides advanced face verification capabilities (powered by a FaceNet model) so you can register multiple face samples per user, verify identities reliably, and keep all processing offline.
@@ -7,19 +7,19 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 
 ---
 
-## 🔥 What's new (v0.3.0)
+## What's new (v0.3.0)
 
-* ⚡ **Background isolate verification**: NEW `verifyFromImagePathIsolate()` keeps UI responsive during verification (v0.3.0).
-* 🚀 **Parallel batch processing**: NEW `identifyUsersFromImagePaths()` processes 10 images in ~5-7 seconds (vs 50s sequential).
-* 🎯 **Multi-image identification**: Identify users across multiple images with configurable parallel processing.
-* 🔒 **Crash prevention**: Pool-based concurrency control (max 3 concurrent operations) prevents thread exhaustion.
-* 📊 **Type-safe results**: New `ImageIdentificationResult` class for per-image results.
-* 🛡️ **Database safety**: Automatic recovery from closed connections, isolate-safe database access.
-* ✅ **Backward compatible**: All existing methods work unchanged including server-side embeddings from v0.2.0.
+* **Background isolate verification**: NEW `verifyFromImagePathIsolate()` keeps UI responsive during verification (v0.3.0).
+* **Parallel batch processing**: NEW `identifyUsersFromImagePaths()` processes 10 images in ~5-7 seconds (vs 50s sequential).
+* **Multi-image identification**: Identify users across multiple images with configurable parallel processing.
+* **Crash prevention**: Pool-based concurrency control (max 3 concurrent operations) prevents thread exhaustion.
+* **Type-safe results**: New `ImageIdentificationResult` class for per-image results.
+* **Database safety**: Automatic recovery from closed connections, isolate-safe database access.
+* **Backward compatible**: All existing methods work unchanged including server-side embeddings from v0.2.0.
 
 ---
 
-## 🧠 Model (FaceNet)
+## Model (FaceNet)
 
 This plugin uses a FaceNet embedding model by default:
 `models/facenet.tflite` — included with the package and used to compute face embeddings on-device.
@@ -28,7 +28,7 @@ If you want to use a different model, the plugin supports loading a custom TFLit
 
 ---
 
-## 🚀 Capabilities
+## Capabilities
 
 * Register multiple labeled face images per person (e.g., `profile_pic`, `work_id`, `passport_photo`)
 * **NEW: Register from server-side embeddings** - batch register 20-50+ faces efficiently
@@ -40,7 +40,7 @@ If you want to use a different model, the plugin supports loading a custom TFLit
 
 ---
 
-## 📦 Installation
+## Installation
 
 Add to your `pubspec.yaml`:
 
@@ -57,7 +57,7 @@ flutter pub get
 
 ---
 
-## 📱 Quick Demo (updated)
+## Quick Demo
 
 ```dart
 // 1. Initialize (do this once when your app starts)
@@ -129,7 +129,7 @@ print('Found ${identifiedUsers.length} users: $identifiedUsers');
 
 ---
 
-## 🎯 Full Usage & Management
+## Full Usage & Management
 
 ### Initialize
 
@@ -300,14 +300,14 @@ await FaceVerification.instance.deleteRecord('employee_123'); // delete all samp
 
 ---
 
-## ⚙️ Database migration notes
+## Database migration notes
 
 * The plugin now stores multiple face rows per user using a composite primary key `(id, imageId)` and a `createdAt` timestamp for each record.
 * On upgrade to v0.0.7 the plugin runs a migration to preserve existing records where possible. If you rely on embedded data, test the upgrade process and back up data before updating in critical environments.
 
 ---
 
-## 📸 Tips for Best Results
+## Tips for Best Results
 
 Good photos:
 
@@ -324,7 +324,7 @@ Avoid:
 
 ---
 
-## 🚨 Troubleshooting (common cases)
+## Troubleshooting (common cases)
 
 **"ID already exists"**
 
@@ -340,7 +340,7 @@ Avoid:
 
 ---
 
-## 🎨 Custom Model (Advanced)
+## Custom Model (Advanced)
 
 You can load your own TFLite model instead of the default `models/facenet.tflite`:
 
@@ -355,7 +355,7 @@ Add the model to your `pubspec.yaml` assets.
 
 ---
 
-## 📱 Example App
+## Example App
 
 See the `example/` folder for a complete app demonstrating registration, verification, and management:
 
@@ -366,7 +366,7 @@ flutter run
 
 ---
 
-## 🆘 Need Help?
+## Need Help?
 
 Please [open an issue](https://github.com/bhanuka96/face_verification/issues) with:
 
@@ -377,7 +377,7 @@ Please [open an issue](https://github.com/bhanuka96/face_verification/issues) wi
 
 ---
 
-## 📄 License
+## License
 
 MIT License — see [LICENSE](LICENSE).
 
