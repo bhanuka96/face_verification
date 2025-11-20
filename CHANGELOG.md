@@ -1,3 +1,7 @@
+## 0.3.1
+
+* **Fix**: Updated README
+
 ## 0.3.0
 
 * **Feature**: Background isolate verification for responsive UI
