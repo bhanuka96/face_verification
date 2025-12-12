@@ -1,3 +1,9 @@
+## 0.3.2
+
+* **Chore**: Bump to v0.3.2 and upgrade image to ^4.6.0
+  * Keeps the package in sync with the latest `image` library improvements and bug fixes
+  * No breaking changes or API modifications
+  
 ## 0.3.1
 
 * **Fix**: Updated README

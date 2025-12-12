@@ -7,7 +7,7 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 
 ---
 
-## What's new (v0.3.0)
+## What's new
 
 * **Background isolate verification**: NEW `verifyFromImagePathIsolate()` keeps UI responsive during verification (v0.3.0).
 * **Parallel batch processing**: NEW `identifyUsersFromImagePaths()` processes 10 images in ~5-7 seconds (vs 50s sequential).
@@ -46,7 +46,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.3.0
+  face_verification: ^0.3.2
 ```
 
 Run:
@@ -96,13 +96,13 @@ if (matchId == 'john_doe') {
   print('Face not recognized');
 }
 
-// 4. NEW (v0.3.0): Verify with background isolate (UI stays responsive)
+// 4. NEW (v0.3.2): Verify with background isolate (UI stays responsive)
 final matchId = await FaceVerification.instance.verifyFromImagePathIsolate(
   imagePath: '/path/to/new_photo.jpg',
   threshold: 0.70,
 );
 
-// 5. NEW (v0.3.0): Identify users across multiple images (parallel processing)
+// 5. NEW (v0.3.2): Identify users across multiple images (parallel processing)
 final results = await FaceVerification.instance.identifyUsersFromImagePaths(
   imagePaths: ['/img1.jpg', '/img2.jpg', '/img3.jpg'],
   threshold: 0.70,
