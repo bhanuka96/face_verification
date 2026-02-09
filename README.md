@@ -12,6 +12,7 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 * **Background isolate verification**: NEW `verifyFromImagePathIsolate()` keeps UI responsive during verification (v0.3.0).
 * **Parallel batch processing**: NEW `identifyUsersFromImagePaths()` processes 10 images in ~5-7 seconds (vs 50s sequential).
 * **Multi-image identification**: Identify users across multiple images with configurable parallel processing.
+* **Annotated group output**: NEW `identifyAllUsersFromImagePathWithBoundingBoxes()` returns an image with green face boundaries.
 * **Crash prevention**: Pool-based concurrency control (max 3 concurrent operations) prevents thread exhaustion.
 * **Type-safe results**: New `ImageIdentificationResult` class for per-image results.
 * **Database safety**: Automatic recovery from closed connections, isolate-safe database access.
@@ -35,6 +36,7 @@ If you want to use a different model, the plugin supports loading a custom TFLit
 * Replace a particular face image for a person by deleting and re-registering
 * Verify a photo against a single person (all their faces) or against everyone
 * **NEW: Identify ALL users in a group photo** - detect and recognize multiple people at once
+* **NEW: Export group photo with green face boxes** - visualize all detected faces
 * List, count, and delete face entries per user
 * All processing runs on-device (no internet), preserving privacy
 
@@ -71,8 +73,8 @@ await FaceVerification.instance.registerFromImagePath(
 );
 
 await FaceVerification.instance.registerFromImagePath(
-  id: 'jane_smith',
-  imagePath: '/path/to/jane_work_id.jpg',
+  id: 'john_doe',
+  imagePath: '/path/to/john_work_id.jpg',
   imageId: 'work_id',
 );
 
@@ -125,6 +127,14 @@ final identifiedUsers = await FaceVerification.instance.identifyAllUsersFromImag
 
 print('Found ${identifiedUsers.length} users: $identifiedUsers');
 // Output: Found 2 users: [john_doe, jane_smith]
+
+// 7. Identify + get annotated image with green face boundaries
+final annotated = await FaceVerification.instance.identifyAllUsersFromImagePathWithBoundingBoxes(
+  imagePath: '/path/to/group_photo.jpg',
+  threshold: 0.60,
+);
+print('Annotated image: ${annotated.annotatedImagePath}');
+print('Detected faces: ${annotated.detectedFaceCount}');
 ```
 
 ---
@@ -173,6 +183,13 @@ Future<List<ImageIdentificationResult>> identifyUsersFromImagePaths({
 Future<List<String>> identifyAllUsersFromImagePath({
   required String imagePath,
   double threshold = 0.60,
+});
+
+Future<AnnotatedImageIdentificationResult> identifyAllUsersFromImagePathWithBoundingBoxes({
+  required String imagePath,
+  double threshold = 0.60,
+  String? outputPath,
+  int lineThickness = 3,
 });
 
 Future<Map<String, dynamic>> registerFromEmbedding({
@@ -307,6 +324,24 @@ final identifiedUsers = await FaceVerification.instance.identifyAllUsersFromImag
 // Returns List<String> of all matched user IDs
 // Example: ['alice', 'bob', 'charlie']
 // Empty list if no matches found
+```
+
+### Group Photo + Green Face Boundaries
+
+Identify users and generate an annotated image with green boxes for all detected faces:
+
+```dart
+final result = await FaceVerification.instance.identifyAllUsersFromImagePathWithBoundingBoxes(
+  imagePath: '/path/to/group_photo.jpg',
+  threshold: 0.60,
+  // optional: outputPath: '/custom/path/group_annotated.jpg',
+  // optional: lineThickness: 3,
+);
+
+print('Users: ${result.userIds}');
+print('Faces detected: ${result.detectedFaceCount}');
+print('Annotated path: ${result.annotatedImagePath}');
+// result.annotatedImageBytes also available
 ```
 
 **Use cases:**
