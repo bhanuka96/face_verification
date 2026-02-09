@@ -367,7 +367,7 @@ class FaceVerification {
   /// ```dart
   /// final results = await FaceVerification.instance.identifyUsersFromImagePaths(
   ///   imagePaths: ['/img1.jpg', '/img2.jpg', '/img3.jpg'],
-  ///   threshold: 0.70,
+  ///   threshold: 0.60,
   ///   batchSize: 3, // Process 3 images in parallel
   /// );
   /// for (var result in results) {
@@ -378,7 +378,7 @@ class FaceVerification {
   /// // /img2.jpg: []
   /// // /img3.jpg: [user789]
   /// ```
-  Future<List<ImageIdentificationResult>> identifyUsersFromImagePaths({required List<String> imagePaths, double threshold = 0.70, int batchSize = 3}) async {
+  Future<List<ImageIdentificationResult>> identifyUsersFromImagePaths({required List<String> imagePaths, double threshold = 0.60, int batchSize = 3}) async {
     _ensureInitialized();
 
     if (imagePaths.isEmpty) return [];
@@ -548,7 +548,7 @@ class FaceVerification {
   /// Identify all users from a single photo containing multiple faces.
   /// Returns a list of unique user IDs that match faces in the image.
   /// Each detected face is compared against all stored embeddings.
-  Future<List<String>> identifyAllUsersFromImagePath({required String imagePath, double threshold = 0.70}) async {
+  Future<List<String>> identifyAllUsersFromImagePath({required String imagePath, double threshold = 0.60}) async {
     _ensureInitialized();
 
     final candidateRecords = await _store.listAll();

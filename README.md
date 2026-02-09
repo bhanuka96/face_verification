@@ -105,7 +105,7 @@ final matchId = await FaceVerification.instance.verifyFromImagePathIsolate(
 // 5. Identify users across multiple images (parallel processing)
 final results = await FaceVerification.instance.identifyUsersFromImagePaths(
   imagePaths: ['/img1.jpg', '/img2.jpg', '/img3.jpg'],
-  threshold: 0.70,
+  threshold: 0.60,
   batchSize: 3, // Process 3 images in parallel
 );
 
@@ -120,7 +120,7 @@ for (var result in results) {
 // 6. Identify ALL users in a single group photo
 final identifiedUsers = await FaceVerification.instance.identifyAllUsersFromImagePath(
   imagePath: '/path/to/group_photo.jpg',
-  threshold: 0.70,
+  threshold: 0.60,
 );
 
 print('Found ${identifiedUsers.length} users: $identifiedUsers');
@@ -166,13 +166,13 @@ Future<List<String?>> verifyFromImagePathsBatch({
 
 Future<List<ImageIdentificationResult>> identifyUsersFromImagePaths({
   required List<String> imagePaths,
-  double threshold = 0.70,
+  double threshold = 0.60,
   int batchSize = 3,
 });
 
 Future<List<String>> identifyAllUsersFromImagePath({
   required String imagePath,
-  double threshold = 0.70,
+  double threshold = 0.60,
 });
 
 Future<Map<String, dynamic>> registerFromEmbedding({
@@ -270,7 +270,7 @@ Identify users across multiple images with parallel processing:
 ```dart
 final results = await FaceVerification.instance.identifyUsersFromImagePaths(
   imagePaths: ['/img1.jpg', '/img2.jpg', '/img3.jpg'],
-  threshold: 0.70,
+  threshold: 0.60,
   batchSize: 3, // Process 3 images in parallel (default: 3, max recommended: 10)
 );
 
@@ -301,7 +301,7 @@ Identify **all users** in a single photo containing multiple faces:
 ```dart
 final identifiedUsers = await FaceVerification.instance.identifyAllUsersFromImagePath(
   imagePath: '/path/to/group_photo.jpg',
-  threshold: 0.70,
+  threshold: 0.60,
 );
 
 // Returns List<String> of all matched user IDs
