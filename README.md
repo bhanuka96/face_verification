@@ -32,7 +32,7 @@ If you want to use a different model, the plugin supports loading a custom TFLit
 
 * Register multiple labeled face images per person (e.g., `profile_pic`, `work_id`, `passport_photo`)
 * **NEW: Register from server-side embeddings** - batch register 20-50+ faces efficiently
-* Replace a particular face image for a person (via `replace` flag)
+* Replace a particular face image for a person by deleting and re-registering
 * Verify a photo against a single person (all their faces) or against everyone
 * **NEW: Identify ALL users in a group photo** - detect and recognize multiple people at once
 * List, count, and delete face entries per user
@@ -46,7 +46,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.3.2
+  face_verification: ^0.3.3
 ```
 
 Run:
@@ -76,12 +76,12 @@ await FaceVerification.instance.registerFromImagePath(
   imageId: 'work_id',
 );
 
-// Replace an existing face image
+// Replace an existing face image: delete then register again
+await FaceVerification.instance.deleteFaceRecord('john_doe', 'profile_pic');
 await FaceVerification.instance.registerFromImagePath(
   id: 'john_doe',
   imagePath: '/path/to/john_new_profile.jpg',
   imageId: 'profile_pic',
-  replace: true,
 );
 
 // 3. Verify a new photo against everyone (returns matched user ID or null)
@@ -96,13 +96,13 @@ if (matchId == 'john_doe') {
   print('Face not recognized');
 }
 
-// 4. NEW (v0.3.2): Verify with background isolate (UI stays responsive)
+// 4. Verify with background isolate (UI stays responsive)
 final matchId = await FaceVerification.instance.verifyFromImagePathIsolate(
   imagePath: '/path/to/new_photo.jpg',
   threshold: 0.70,
 );
 
-// 5. NEW (v0.3.2): Identify users across multiple images (parallel processing)
+// 5. Identify users across multiple images (parallel processing)
 final results = await FaceVerification.instance.identifyUsersFromImagePaths(
   imagePaths: ['/img1.jpg', '/img2.jpg', '/img3.jpg'],
   threshold: 0.70,
@@ -131,6 +131,72 @@ print('Found ${identifiedUsers.length} users: $identifiedUsers');
 
 ## Full Usage & Management
 
+### Current Public API (`FaceVerification`)
+
+```dart
+Future<void> init({
+  String modelAsset = 'packages/face_verification/assets/models/facenet.tflite',
+  int numThreads = 4,
+});
+
+Future<String> registerFromImagePath({
+  required String id,
+  required String imagePath,
+  required String imageId,
+  bool replace = true,
+});
+
+Future<String?> verifyFromImagePath({
+  required String imagePath,
+  double threshold = 0.70,
+  String? staffId,
+});
+
+Future<String?> verifyFromImagePathIsolate({
+  required String imagePath,
+  double threshold = 0.70,
+  String? staffId,
+});
+
+Future<List<String?>> verifyFromImagePathsBatch({
+  required List<String> imagePaths,
+  double threshold = 0.70,
+  String? staffId,
+});
+
+Future<List<ImageIdentificationResult>> identifyUsersFromImagePaths({
+  required List<String> imagePaths,
+  double threshold = 0.70,
+  int batchSize = 3,
+});
+
+Future<List<String>> identifyAllUsersFromImagePath({
+  required String imagePath,
+  double threshold = 0.70,
+});
+
+Future<Map<String, dynamic>> registerFromEmbedding({
+  required String id,
+  required String imageId,
+  required List<double> embedding,
+});
+
+Future<List<Map<String, dynamic>>> registerFromEmbeddingsBatch({
+  required List<Map<String, dynamic>> embeddingsData,
+});
+
+Future<bool> isFaceRegistered(String id);
+Future<bool> isFaceRegisteredWithImageId(String id, String imageId);
+Future<List<FaceRecord>> getFacesForUser(String userId);
+Future<int> getFaceCountForUser(String userId);
+Future<List<String>> getAllRegisteredUsers();
+Future<List<FaceRecord>> listRegisteredAsync();
+Future<void> deleteFaceRecord(String userId, String imageId);
+Future<void> deleteUserFaces(String userId);
+Future<void> deleteRecord(String id); // legacy alias
+Future<void> dispose();
+```
+
 ### Initialize
 
 Call once when your app starts:
@@ -152,6 +218,9 @@ await FaceVerification.instance.registerFromImagePath(
   replace: false,          // optional
 );
 ```
+
+If the same `(id, imageId)` already exists, registration throws an error.
+To replace a face sample, call `deleteFaceRecord(userId, imageId)` first, then register again.
 
 ### Verify
 
@@ -182,7 +251,7 @@ final matchId = await FaceVerification.instance.verifyFromImagePathIsolate(
 
 **Batch Verification (NEW in v0.3.0):**
 
-Process multiple images with automatic queuing:
+Process multiple images and return one result per image:
 
 ```dart
 final results = await FaceVerification.instance.verifyFromImagePathsBatch(
@@ -190,7 +259,7 @@ final results = await FaceVerification.instance.verifyFromImagePathsBatch(
   threshold: 0.70,
 );
 
-// Returns List<String?> - one result per image
+// Returns List<String?> - one result per image, in input order
 // Example: ['john_doe', null, 'jane_smith']
 ```
 
@@ -291,11 +360,14 @@ print('Registered $successCount/${results.length} faces');
 
 ```dart
 final faces = await FaceVerification.instance.getFacesForUser('employee_123');
-final count = await FaceVerification.instance.getFacesCountForUser('employee_123');
+final count = await FaceVerification.instance.getFaceCountForUser('employee_123');
 final isRegistered = await FaceVerification.instance.isFaceRegistered('employee_123');
 final hasSpecific = await FaceVerification.instance.isFaceRegisteredWithImageId('employee_123', 'passport');
-await FaceVerification.instance.deleteFace('employee_123', 'passport'); // delete one sample
-await FaceVerification.instance.deleteRecord('employee_123'); // delete all samples for user
+final users = await FaceVerification.instance.getAllRegisteredUsers();
+final allRecords = await FaceVerification.instance.listRegisteredAsync();
+await FaceVerification.instance.deleteFaceRecord('employee_123', 'passport'); // delete one sample
+await FaceVerification.instance.deleteUserFaces('employee_123'); // delete all samples for user
+await FaceVerification.instance.deleteRecord('employee_123'); // legacy alias
 ```
 
 ---
@@ -328,7 +400,7 @@ Avoid:
 
 **"ID already exists"**
 
-* With multi-face support this only happens for the same `(id, imageId)`. Use a different `imageId` or `replace: true`.
+* With multi-face support this only happens for the same `(id, imageId)`. Use a different `imageId`, or delete first with `deleteFaceRecord(id, imageId)` and register again.
 
 **"Multiple faces detected"**
 
