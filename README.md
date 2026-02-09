@@ -12,7 +12,7 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 * **Background isolate verification**: NEW `verifyFromImagePathIsolate()` keeps UI responsive during verification (v0.3.0).
 * **Parallel batch processing**: NEW `identifyUsersFromImagePaths()` processes 10 images in ~5-7 seconds (vs 50s sequential).
 * **Multi-image identification**: Identify users across multiple images with configurable parallel processing.
-* **Annotated group output**: NEW `identifyAllUsersFromImagePathWithBoundingBoxes()` returns an image with green face boundaries.
+* **Annotated group output**: NEW `identifyAllUsersFromImagePathWithBoundingBoxes()` returns an image with green face boundaries (v0.3.4).
 * **Crash prevention**: Pool-based concurrency control (max 3 concurrent operations) prevents thread exhaustion.
 * **Type-safe results**: New `ImageIdentificationResult` class for per-image results.
 * **Database safety**: Automatic recovery from closed connections, isolate-safe database access.
@@ -48,7 +48,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.3.3
+  face_verification: ^0.3.4
 ```
 
 Run:

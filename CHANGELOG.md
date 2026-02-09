@@ -1,3 +1,21 @@
+## 0.3.4
+
+* **Feature**: Added group-photo annotation API with face boundaries
+  * New method `identifyAllUsersFromImagePathWithBoundingBoxes()` returns:
+    * identified user IDs
+    * detected face count
+    * annotated image path
+    * annotated image bytes
+  * Draws green rectangle boundaries for all detected faces (supports multiple faces)
+  * Supports optional `outputPath` and configurable `lineThickness`
+* **Enhancement**: Refactored identification internals to reduce duplication
+  * `identifyAllUsersFromImagePath()` now uses shared internal identification computation
+  * Added DB safety parity by ensuring database connection is open before group identification
+* **Tuning**: Group-identification defaults updated for better multi-face recognition
+  * `identifyUsersFromImagePaths()` default threshold changed to `0.60`
+  * `identifyAllUsersFromImagePath()` default threshold changed to `0.60`
+* **Docs**: Updated README with new API usage and release snippets
+
 ## 0.3.3
 
 * **Chore**: Bump to v0.3.3 and upgrade image to ^4.7.2
