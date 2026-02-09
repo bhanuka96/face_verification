@@ -1,3 +1,9 @@
+## 0.3.5
+
+* **Chore**: Bump to v0.3.5 and upgrade `google_mlkit_face_detection` to `^0.13.2`
+  * Keeps face detection dependency aligned with latest patch updates
+  * No breaking API changes
+
 ## 0.3.4
 
 * **Feature**: Added group-photo annotation API with face boundaries
