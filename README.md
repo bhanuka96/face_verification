@@ -13,6 +13,8 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 * **Parallel batch processing**: NEW `identifyUsersFromImagePaths()` processes 10 images in ~5-7 seconds (vs 50s sequential).
 * **Multi-image identification**: Identify users across multiple images with configurable parallel processing.
 * **Annotated group output**: NEW `identifyAllUsersFromImagePathWithBoundingBoxes()` returns an image with green face boundaries (v0.3.4).
+* **Name labels on face boxes**: If a matched face has stored `name`, it is rendered near the box (v0.3.6).
+* **Optional name storage**: Registration APIs now accept optional `name` for display use (v0.3.6).
 * **Crash prevention**: Pool-based concurrency control (max 3 concurrent operations) prevents thread exhaustion.
 * **Type-safe results**: New `ImageIdentificationResult` class for per-image results.
 * **Database safety**: Automatic recovery from closed connections, isolate-safe database access.
@@ -48,7 +50,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.3.5
+  face_verification: ^0.3.6
 ```
 
 Run:
@@ -70,12 +72,14 @@ await FaceVerification.instance.registerFromImagePath(
   id: 'john_doe',
   imagePath: '/path/to/john_profile.jpg',
   imageId: 'profile_pic',
+  name: 'John Doe', // optional
 );
 
 await FaceVerification.instance.registerFromImagePath(
   id: 'john_doe',
   imagePath: '/path/to/john_work_id.jpg',
   imageId: 'work_id',
+  name: 'John Doe', // optional
 );
 
 // Replace an existing face image: delete then register again
@@ -84,6 +88,7 @@ await FaceVerification.instance.registerFromImagePath(
   id: 'john_doe',
   imagePath: '/path/to/john_new_profile.jpg',
   imageId: 'profile_pic',
+  name: 'John Doe', // optional
 );
 
 // 3. Verify a new photo against everyone (returns matched user ID or null)
@@ -153,6 +158,7 @@ Future<String> registerFromImagePath({
   required String id,
   required String imagePath,
   required String imageId,
+  String? name,
   bool replace = true,
 });
 
@@ -196,6 +202,7 @@ Future<Map<String, dynamic>> registerFromEmbedding({
   required String id,
   required String imageId,
   required List<double> embedding,
+  String? name,
 });
 
 Future<List<Map<String, dynamic>>> registerFromEmbeddingsBatch({
@@ -232,6 +239,7 @@ await FaceVerification.instance.registerFromImagePath(
   id: 'employee_123',
   imagePath: '/path/to/photo.jpg',
   imageId: 'passport',     // unique per user
+  name: 'Alice Johnson',   // optional
   replace: false,          // optional
 );
 ```
@@ -342,6 +350,7 @@ print('Users: ${result.userIds}');
 print('Faces detected: ${result.detectedFaceCount}');
 print('Annotated path: ${result.annotatedImagePath}');
 // result.annotatedImageBytes also available
+// If a matched face has stored `name`, it is drawn near the bottom of that box.
 ```
 
 **Use cases:**
@@ -360,6 +369,7 @@ Register pre-computed embeddings from your server for better performance with la
 final result = await FaceVerification.instance.registerFromEmbedding(
   id: '123',
   imageId: 'staffs/123/photo/profile.jpg',
+  name: 'John Doe', // optional
   embedding: [0.123, -0.456, ...], // 512 floats from your API
 );
 
@@ -384,6 +394,8 @@ final results = await FaceVerification.instance.registerFromEmbeddingsBatch(
 final successCount = results.where((r) => r['success'] == true).length;
 print('Registered $successCount/${results.length} faces');
 ```
+
+Batch items may include optional `name` or `staff_name` fields to store display names.
 
 **Use cases:**
 * Batch onboarding (register 20-50 employee photos at once)
@@ -410,6 +422,7 @@ await FaceVerification.instance.deleteRecord('employee_123'); // legacy alias
 ## Database migration notes
 
 * The plugin now stores multiple face rows per user using a composite primary key `(id, imageId)` and a `createdAt` timestamp for each record.
+* Newer versions add an optional `name` column for display labels. Existing records remain valid with `name = null`.
 * On upgrade to v0.0.7 the plugin runs a migration to preserve existing records where possible. If you rely on embedded data, test the upgrade process and back up data before updating in critical environments.
 
 ---

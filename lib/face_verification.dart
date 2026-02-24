@@ -26,8 +26,7 @@ class ImageIdentificationResult {
   ImageIdentificationResult({required this.imagePath, required this.userIds});
 
   @override
-  String toString() =>
-      'ImageIdentificationResult(imagePath: $imagePath, userIds: $userIds)';
+  String toString() => 'ImageIdentificationResult(imagePath: $imagePath, userIds: $userIds)';
 }
 
 /// Result of identifying users and generating an annotated image with face boxes.
@@ -66,14 +65,19 @@ class AnnotatedImageIdentificationResult {
 /// Internal shared result for identification workflows.
 class _ImageIdentificationComputation {
   final List<Face> faces;
+  final List<_FaceMatchResult> faceMatches;
   final Set<String> matchedUserIds;
   final Uint8List? imageBytes;
 
-  _ImageIdentificationComputation({
-    required this.faces,
-    required this.matchedUserIds,
-    required this.imageBytes,
-  });
+  _ImageIdentificationComputation({required this.faces, required this.faceMatches, required this.matchedUserIds, required this.imageBytes});
+}
+
+/// Internal per-face match details used for annotation.
+class _FaceMatchResult {
+  final Face face;
+  final String? name;
+
+  _FaceMatchResult({required this.face, required this.name});
 }
 
 /// Internal output for generated annotated images.
@@ -90,11 +94,7 @@ class _ImageFaceData {
   final List<Face> faces;
   final Uint8List bytes;
 
-  _ImageFaceData({
-    required this.imagePath,
-    required this.faces,
-    required this.bytes,
-  });
+  _ImageFaceData({required this.imagePath, required this.faces, required this.bytes});
 }
 
 /// Helper function to split a list into chunks of specified size.
@@ -121,11 +121,7 @@ class FaceVerification {
   bool _initialized = false;
 
   /// Initialize database and load TFLite embedding model.
-  Future<void> init({
-    String modelAsset =
-        'packages/face_verification/assets/models/facenet.tflite',
-    int numThreads = 4,
-  }) async {
+  Future<void> init({String modelAsset = 'packages/face_verification/assets/models/facenet.tflite', int numThreads = 4}) async {
     if (_initialized) return;
     try {
       await _store.init();
@@ -148,14 +144,10 @@ class FaceVerification {
   }
 
   /// Register a face from an image file path with mandatory user-provided ID.
+  /// Optional [name] can be stored and used later for face-box labels.
   /// Now supports multiple faces per user.
   /// Returns the provided ID if successful.
-  Future<String> registerFromImagePath({
-    required String id,
-    required String imagePath,
-    required String imageId,
-    bool replace = true,
-  }) async {
+  Future<String> registerFromImagePath({required String id, required String imagePath, required String imageId, String? name, bool replace = true}) async {
     _ensureInitialized();
 
     // Ensure database is open (might have been closed by an isolate)
@@ -172,9 +164,7 @@ class FaceVerification {
     // Check if this specific face (id + imageId) already exists
     final existingRecord = await _store.getByUserIdAndImageId(id, imageId);
     if (existingRecord != null) {
-      throw Exception(
-        'A face record with ID "$id" and imageId "$imageId" already exists.',
-      );
+      throw Exception('A face record with ID "$id" and imageId "$imageId" already exists.');
     }
 
     final tempDir = await getTemporaryDirectory();
@@ -191,9 +181,7 @@ class FaceVerification {
       } else {
         // Read bytes, create temp file
         bytes = await File(imagePath).readAsBytes();
-        tempFile = File(
-          '${tempDir.path}/temp_face_${DateTime.now().millisecondsSinceEpoch}.jpg',
-        );
+        tempFile = File('${tempDir.path}/temp_face_${DateTime.now().millisecondsSinceEpoch}.jpg');
         await tempFile.writeAsBytes(bytes);
       }
 
@@ -207,22 +195,16 @@ class FaceVerification {
       }
 
       // final bytes = await File(imagePath).readAsBytes();
-      final modelInput = await preprocessForModel(
-        rawImageBytes: bytes,
-        face: faces.first,
-        inputSize: _embedder.getModelInputSize(),
-      );
+      final modelInput = await preprocessForModel(rawImageBytes: bytes, face: faces.first, inputSize: _embedder.getModelInputSize());
       final embedding = await _embedder.runModelOnPreprocessed(modelInput);
       if (embedding.isEmpty) throw Exception('Failed to generate embedding');
 
-      final record = FaceRecord(id, imageId, embedding);
+      final record = FaceRecord(id, imageId, embedding, name: name);
       await _store.upsert(record, replace: replace);
 
       final totalFaces = await _store.getFaceCountForUser(id);
       final action = existingRecord != null ? "Replaced" : "Registered";
-      log(
-        '$action face for user "$id" with imageId "$imageId". Total faces for user: $totalFaces',
-      );
+      log('$action face for user "$id" with imageId "$imageId". Total faces for user: $totalFaces');
 
       return id;
     } finally {
@@ -236,11 +218,7 @@ class FaceVerification {
   /// Verify a face image against all stored embeddings for the user.
   /// If staffId is provided, only compares against that user's faces.
   /// If staffId is null, compares against all users' faces.
-  Future<String?> verifyFromImagePath({
-    required String imagePath,
-    double threshold = 0.70,
-    String? staffId,
-  }) async {
+  Future<String?> verifyFromImagePath({required String imagePath, double threshold = 0.70, String? staffId}) async {
     _ensureInitialized();
 
     // Ensure database is open (might have been closed by an isolate)
@@ -266,11 +244,7 @@ class FaceVerification {
     // Generate embeddings for all detected faces in the input image
     final Map<Face, List<double>> faceEmbeddings = {};
     for (final face in faces) {
-      final modelInput = await preprocessForModel(
-        rawImageBytes: bytes,
-        face: face,
-        inputSize: _embedder.getModelInputSize(),
-      );
+      final modelInput = await preprocessForModel(rawImageBytes: bytes, face: face, inputSize: _embedder.getModelInputSize());
       final emb = await _embedder.runModelOnPreprocessed(modelInput);
       if (emb.isNotEmpty) faceEmbeddings[face] = emb;
     }
@@ -288,9 +262,7 @@ class FaceVerification {
       }
     }
 
-    log(
-      'Best Score: $bestScore, ID: $bestMatchId, Candidate records: ${candidateRecords.length}',
-    );
+    log('Best Score: $bestScore, ID: $bestMatchId, Candidate records: ${candidateRecords.length}');
 
     if (bestMatchId != null && bestScore >= threshold) {
       return bestMatchId;
@@ -316,11 +288,7 @@ class FaceVerification {
   /// If staffId is null, compares against all users' faces.
   ///
   /// Returns the matched user ID if found, or null if no match.
-  Future<String?> verifyFromImagePathIsolate({
-    required String imagePath,
-    double threshold = 0.70,
-    String? staffId,
-  }) async {
+  Future<String?> verifyFromImagePathIsolate({required String imagePath, double threshold = 0.70, String? staffId}) async {
     _ensureInitialized();
 
     // Request a resource from the pool (limits concurrent verifications to 3)
@@ -334,9 +302,7 @@ class FaceVerification {
       // Get RootIsolateToken for BackgroundIsolateBinaryMessenger
       final rootIsolateToken = ServicesBinding.rootIsolateToken;
       if (rootIsolateToken == null) {
-        throw Exception(
-          'RootIsolateToken is null. Make sure to call this from the main isolate.',
-        );
+        throw Exception('RootIsolateToken is null. Make sure to call this from the main isolate.');
       }
 
       // Load TFLite model bytes on main isolate (asset loading requires ServicesBinding)
@@ -400,11 +366,7 @@ class FaceVerification {
   /// );
   /// // results might be: ['user123', null, 'user456']
   /// ```
-  Future<List<String?>> verifyFromImagePathsBatch({
-    required List<String> imagePaths,
-    double threshold = 0.70,
-    String? staffId,
-  }) async {
+  Future<List<String?>> verifyFromImagePathsBatch({required List<String> imagePaths, double threshold = 0.70, String? staffId}) async {
     _ensureInitialized();
 
     if (imagePaths.isEmpty) return [];
@@ -421,11 +383,7 @@ class FaceVerification {
       log('[BATCH] Processing ${i + 1}/${imagePaths.length}: $imagePath');
 
       try {
-        final result = await verifyFromImagePathIsolate(
-          imagePath: imagePath,
-          threshold: threshold,
-          staffId: staffId,
-        );
+        final result = await verifyFromImagePathIsolate(imagePath: imagePath, threshold: threshold, staffId: staffId);
         results.add(result);
 
         if (result != null) {
@@ -443,9 +401,7 @@ class FaceVerification {
     }
 
     stopwatch.stop();
-    log(
-      '[BATCH] Completed: ${results.length} total, $successCount matched, $failureCount no match/failed in ${stopwatch.elapsedMilliseconds}ms',
-    );
+    log('[BATCH] Completed: ${results.length} total, $successCount matched, $failureCount no match/failed in ${stopwatch.elapsedMilliseconds}ms');
 
     return results;
   }
@@ -484,11 +440,7 @@ class FaceVerification {
   /// // /img2.jpg: []
   /// // /img3.jpg: [user789]
   /// ```
-  Future<List<ImageIdentificationResult>> identifyUsersFromImagePaths({
-    required List<String> imagePaths,
-    double threshold = 0.60,
-    int batchSize = 3,
-  }) async {
+  Future<List<ImageIdentificationResult>> identifyUsersFromImagePaths({required List<String> imagePaths, double threshold = 0.60, int batchSize = 3}) async {
     _ensureInitialized();
 
     if (imagePaths.isEmpty) return [];
@@ -503,14 +455,10 @@ class FaceVerification {
       return [];
     }
 
-    log(
-      '[MULTI-ID] Loaded ${candidateRecords.length} face records from database',
-    );
+    log('[MULTI-ID] Loaded ${candidateRecords.length} face records from database');
 
     // ========== PHASE 1: DETECT FACES FROM ALL IMAGES (PARALLEL) ==========
-    log(
-      '[MULTI-ID] ========== Phase 1: Detecting faces from all images ==========',
-    );
+    log('[MULTI-ID] ========== Phase 1: Detecting faces from all images ==========');
     log('[MULTI-ID] Using parallel processing with batch size: $batchSize');
     final phase1Stopwatch = Stopwatch()..start();
 
@@ -519,17 +467,13 @@ class FaceVerification {
 
     // Split images into batches for parallel processing
     final batches = _chunkList(imagePaths, batchSize);
-    log(
-      '[MULTI-ID] Processing ${imagePaths.length} images in ${batches.length} batch(es)',
-    );
+    log('[MULTI-ID] Processing ${imagePaths.length} images in ${batches.length} batch(es)');
 
     int processedCount = 0;
 
     for (int batchIdx = 0; batchIdx < batches.length; batchIdx++) {
       final batch = batches[batchIdx];
-      log(
-        '[MULTI-ID] Batch ${batchIdx + 1}/${batches.length}: Processing ${batch.length} images in parallel...',
-      );
+      log('[MULTI-ID] Batch ${batchIdx + 1}/${batches.length}: Processing ${batch.length} images in parallel...');
 
       // Process batch in parallel using Future.wait
       final batchResults = await Future.wait(
@@ -539,48 +483,29 @@ class FaceVerification {
             final faces = await _detector.detectFaces(inputImage);
             final bytes = await File(imagePath).readAsBytes();
 
-            log(
-              '[MULTI-ID]   → ${imagePath.split('/').last}: ${faces.length} face(s)',
-            );
+            log('[MULTI-ID]   → ${imagePath.split('/').last}: ${faces.length} face(s)');
 
-            return _ImageFaceData(
-              imagePath: imagePath,
-              faces: faces,
-              bytes: bytes,
-            );
+            return _ImageFaceData(imagePath: imagePath, faces: faces, bytes: bytes);
           } catch (e) {
             log('[MULTI-ID]   → ${imagePath.split('/').last}: Error - $e');
-            return _ImageFaceData(
-              imagePath: imagePath,
-              faces: [],
-              bytes: Uint8List(0),
-            );
+            return _ImageFaceData(imagePath: imagePath, faces: [], bytes: Uint8List(0));
           }
         }),
       );
 
       // Add batch results to main list
       allImageFaces.addAll(batchResults);
-      totalFacesDetected += batchResults.fold<int>(
-        0,
-        (sum, data) => sum + data.faces.length,
-      );
+      totalFacesDetected += batchResults.fold<int>(0, (sum, data) => sum + data.faces.length);
       processedCount += batch.length;
 
-      log(
-        '[MULTI-ID] Batch ${batchIdx + 1} complete: $processedCount/${imagePaths.length} images processed',
-      );
+      log('[MULTI-ID] Batch ${batchIdx + 1} complete: $processedCount/${imagePaths.length} images processed');
     }
 
     phase1Stopwatch.stop();
-    log(
-      '[MULTI-ID] Phase 1 complete: Detected $totalFacesDetected total faces in ${phase1Stopwatch.elapsedMilliseconds}ms',
-    );
+    log('[MULTI-ID] Phase 1 complete: Detected $totalFacesDetected total faces in ${phase1Stopwatch.elapsedMilliseconds}ms');
 
     // ========== PHASE 2: PROCESS ALL DETECTED FACES ==========
-    log(
-      '[MULTI-ID] ========== Phase 2: Processing all detected faces ==========',
-    );
+    log('[MULTI-ID] ========== Phase 2: Processing all detected faces ==========');
     final phase2Stopwatch = Stopwatch()..start();
 
     final List<ImageIdentificationResult> results = [];
@@ -590,9 +515,7 @@ class FaceVerification {
     for (int i = 0; i < allImageFaces.length; i++) {
       final imageData = allImageFaces[i];
       final imagePath = imageData.imagePath;
-      log(
-        '[MULTI-ID] Processing image ${i + 1}/${allImageFaces.length}: $imagePath',
-      );
+      log('[MULTI-ID] Processing image ${i + 1}/${allImageFaces.length}: $imagePath');
 
       try {
         // Track matched user IDs for THIS image only
@@ -600,48 +523,34 @@ class FaceVerification {
 
         if (imageData.faces.isEmpty) {
           log('[MULTI-ID]   → No faces to process');
-          results.add(
-            ImageIdentificationResult(imagePath: imagePath, userIds: []),
-          );
+          results.add(ImageIdentificationResult(imagePath: imagePath, userIds: []));
           continue;
         }
 
         // Generate embeddings for all faces in this image (in parallel)
-        log(
-          '[MULTI-ID]   → Generating ${imageData.faces.length} embedding(s) in parallel...',
-        );
+        log('[MULTI-ID]   → Generating ${imageData.faces.length} embedding(s) in parallel...');
 
         final faceEmbeddingResults = await Future.wait(
           imageData.faces.asMap().entries.map((entry) async {
             final faceIdx = entry.key;
             final face = entry.value;
             try {
-              final modelInput = await preprocessForModel(
-                rawImageBytes: imageData.bytes,
-                face: face,
-                inputSize: _embedder.getModelInputSize(),
-              );
+              final modelInput = await preprocessForModel(rawImageBytes: imageData.bytes, face: face, inputSize: _embedder.getModelInputSize());
               final emb = await _embedder.runModelOnPreprocessed(modelInput);
               if (emb.isNotEmpty) {
                 return emb;
               }
             } catch (e) {
-              log(
-                '[MULTI-ID]   → Error generating embedding for face ${faceIdx + 1}: $e',
-              );
+              log('[MULTI-ID]   → Error generating embedding for face ${faceIdx + 1}: $e');
             }
             return <double>[];
           }),
         );
 
         // Filter out empty embeddings
-        final List<List<double>> faceEmbeddings = faceEmbeddingResults
-            .where((emb) => emb.isNotEmpty)
-            .toList();
+        final List<List<double>> faceEmbeddings = faceEmbeddingResults.where((emb) => emb.isNotEmpty).toList();
 
-        log(
-          '[MULTI-ID]   → Successfully generated ${faceEmbeddings.length}/${imageData.faces.length} embedding(s)',
-        );
+        log('[MULTI-ID]   → Successfully generated ${faceEmbeddings.length}/${imageData.faces.length} embedding(s)');
 
         // Compare each detected face against all stored records
         for (final inputEmbedding in faceEmbeddings) {
@@ -660,21 +569,14 @@ class FaceVerification {
 
           if (bestMatchId != null && bestScore >= threshold) {
             if (!imageUserIds.contains(bestMatchId)) {
-              log(
-                '[MULTI-ID]   ✓ Match found: $bestMatchId (score: ${bestScore.toStringAsFixed(3)})',
-              );
+              log('[MULTI-ID]   ✓ Match found: $bestMatchId (score: ${bestScore.toStringAsFixed(3)})');
               imageUserIds.add(bestMatchId);
             }
           }
         }
 
         // Add result for this image
-        results.add(
-          ImageIdentificationResult(
-            imagePath: imagePath,
-            userIds: imageUserIds.toList(),
-          ),
-        );
+        results.add(ImageIdentificationResult(imagePath: imagePath, userIds: imageUserIds.toList()));
 
         successfulImages++;
         log('[MULTI-ID]   → Completed - Found ${imageUserIds.length} user(s)');
@@ -682,16 +584,12 @@ class FaceVerification {
         log('[MULTI-ID]   → Error processing: $e');
         failedImages++;
         // Add result with empty user list for failed images
-        results.add(
-          ImageIdentificationResult(imagePath: imagePath, userIds: []),
-        );
+        results.add(ImageIdentificationResult(imagePath: imagePath, userIds: []));
       }
     }
 
     phase2Stopwatch.stop();
-    log(
-      '[MULTI-ID] Phase 2 complete: Processed all faces in ${phase2Stopwatch.elapsedMilliseconds}ms',
-    );
+    log('[MULTI-ID] Phase 2 complete: Processed all faces in ${phase2Stopwatch.elapsedMilliseconds}ms');
 
     totalStopwatch.stop();
 
@@ -701,12 +599,8 @@ class FaceVerification {
     log('[MULTI-ID] Successful: $successfulImages');
     log('[MULTI-ID] Failed: $failedImages');
     log('[MULTI-ID] Total faces detected: $totalFacesDetected');
-    log(
-      '[MULTI-ID] Phase 1 time: ${phase1Stopwatch.elapsedMilliseconds}ms (face detection)',
-    );
-    log(
-      '[MULTI-ID] Phase 2 time: ${phase2Stopwatch.elapsedMilliseconds}ms (processing)',
-    );
+    log('[MULTI-ID] Phase 1 time: ${phase1Stopwatch.elapsedMilliseconds}ms (face detection)');
+    log('[MULTI-ID] Phase 2 time: ${phase2Stopwatch.elapsedMilliseconds}ms (processing)');
     log('[MULTI-ID] Total time: ${totalStopwatch.elapsedMilliseconds}ms');
     log('[MULTI-ID] ========================================');
 
@@ -716,25 +610,16 @@ class FaceVerification {
   /// Identify all users from a single photo containing multiple faces.
   /// Returns a list of unique user IDs that match faces in the image.
   /// Each detected face is compared against all stored embeddings.
-  Future<List<String>> identifyAllUsersFromImagePath({
-    required String imagePath,
-    double threshold = 0.60,
-  }) async {
+  Future<List<String>> identifyAllUsersFromImagePath({required String imagePath, double threshold = 0.60}) async {
     _ensureInitialized();
     await _store.ensureOpen();
 
     final candidateRecords = await _store.listAll();
     if (candidateRecords.isEmpty) return [];
 
-    final computation = await _identifyUsersInImage(
-      imagePath: imagePath,
-      candidateRecords: candidateRecords,
-      threshold: threshold,
-    );
+    final computation = await _identifyUsersInImage(imagePath: imagePath, candidateRecords: candidateRecords, threshold: threshold);
 
-    log(
-      'Detected ${computation.faces.length} faces, identified ${computation.matchedUserIds.length} users: ${computation.matchedUserIds}',
-    );
+    log('Detected ${computation.faces.length} faces, identified ${computation.matchedUserIds.length} users: ${computation.matchedUserIds}');
 
     return computation.matchedUserIds.toList();
   }
@@ -742,15 +627,15 @@ class FaceVerification {
   /// Identify all users from a single photo and generate an annotated image.
   ///
   /// The generated image draws green rectangle boundaries for every detected face
-  /// (matched or unmatched). This supports single-face and group-photo workflows.
+  /// (matched or unmatched). If a matched face has a stored [name], that name is
+  /// rendered near the bottom edge of the face box.
   ///
   /// Returns [AnnotatedImageIdentificationResult] including:
   /// - identified user IDs
   /// - detected face count
   /// - output image path
   /// - output image bytes
-  Future<AnnotatedImageIdentificationResult>
-  identifyAllUsersFromImagePathWithBoundingBoxes({
+  Future<AnnotatedImageIdentificationResult> identifyAllUsersFromImagePathWithBoundingBoxes({
     required String imagePath,
     double threshold = 0.60,
     String? outputPath,
@@ -764,12 +649,7 @@ class FaceVerification {
     }
 
     final candidateRecords = await _store.listAll();
-    final computation = await _identifyUsersInImage(
-      imagePath: imagePath,
-      candidateRecords: candidateRecords,
-      threshold: threshold,
-      includeImageBytes: true,
-    );
+    final computation = await _identifyUsersInImage(imagePath: imagePath, candidateRecords: candidateRecords, threshold: threshold, includeImageBytes: true);
 
     final sourceImageBytes = computation.imageBytes;
     if (sourceImageBytes == null) {
@@ -779,14 +659,12 @@ class FaceVerification {
     final annotatedOutput = await _generateAndPersistAnnotatedImage(
       sourceImagePath: imagePath,
       sourceImageBytes: sourceImageBytes,
-      faces: computation.faces,
+      faceMatches: computation.faceMatches,
       lineThickness: lineThickness,
       outputPath: outputPath,
     );
 
-    log(
-      'Detected ${computation.faces.length} faces, identified ${computation.matchedUserIds.length} users, annotated image: ${annotatedOutput.path}',
-    );
+    log('Detected ${computation.faces.length} faces, identified ${computation.matchedUserIds.length} users, annotated image: ${annotatedOutput.path}');
 
     return AnnotatedImageIdentificationResult(
       imagePath: imagePath,
@@ -807,26 +685,17 @@ class FaceVerification {
     final faces = await _detector.detectFaces(inputImage);
 
     if (faces.isEmpty) {
-      final bytes = includeImageBytes
-          ? await File(imagePath).readAsBytes()
-          : null;
-      return _ImageIdentificationComputation(
-        faces: const [],
-        matchedUserIds: <String>{},
-        imageBytes: bytes,
-      );
+      final bytes = includeImageBytes ? await File(imagePath).readAsBytes() : null;
+      return _ImageIdentificationComputation(faces: const [], faceMatches: const [], matchedUserIds: <String>{}, imageBytes: bytes);
     }
 
     final bytes = await File(imagePath).readAsBytes();
+    final faceMatches = <_FaceMatchResult>[];
     final matchedUserIds = <String>{};
 
     for (final face in faces) {
       try {
-        final modelInput = await preprocessForModel(
-          rawImageBytes: bytes,
-          face: face,
-          inputSize: _embedder.getModelInputSize(),
-        );
+        final modelInput = await preprocessForModel(rawImageBytes: bytes, face: face, inputSize: _embedder.getModelInputSize());
         final emb = await _embedder.runModelOnPreprocessed(modelInput);
         if (emb.isEmpty) {
           continue;
@@ -834,6 +703,7 @@ class FaceVerification {
 
         double bestScore = -1.0;
         String? bestMatchId;
+        String? bestMatchName;
 
         for (final record in candidateRecords) {
           if (record.embedding.length == emb.length) {
@@ -841,45 +711,40 @@ class FaceVerification {
             if (score > bestScore) {
               bestScore = score;
               bestMatchId = record.id;
+              bestMatchName = record.name;
             }
           }
         }
 
-        final acceptedId = (bestMatchId != null && bestScore >= threshold)
-            ? bestMatchId
-            : null;
+        final acceptedId = (bestMatchId != null && bestScore >= threshold) ? bestMatchId : null;
+        final acceptedName = (bestMatchId != null && bestScore >= threshold) ? bestMatchName : null;
         if (acceptedId != null) {
           matchedUserIds.add(acceptedId);
         }
+        faceMatches.add(_FaceMatchResult(face: face, name: acceptedName));
       } catch (e) {
         log('Error processing detected face: $e');
+        faceMatches.add(_FaceMatchResult(face: face, name: null));
       }
     }
 
-    return _ImageIdentificationComputation(
-      faces: faces,
-      matchedUserIds: matchedUserIds,
-      imageBytes: bytes,
-    );
+    return _ImageIdentificationComputation(faces: faces, faceMatches: faceMatches, matchedUserIds: matchedUserIds, imageBytes: bytes);
   }
 
   Future<_AnnotatedImageOutput> _generateAndPersistAnnotatedImage({
     required String sourceImagePath,
     required Uint8List sourceImageBytes,
-    required List<Face> faces,
+    required List<_FaceMatchResult> faceMatches,
     required int lineThickness,
     String? outputPath,
   }) async {
-    final resolvedPath = await _resolveAnnotatedImagePath(
-      sourceImagePath: sourceImagePath,
-      outputPath: outputPath,
-    );
+    final resolvedPath = await _resolveAnnotatedImagePath(sourceImagePath: sourceImagePath, outputPath: outputPath);
     final ext = p.extension(resolvedPath).toLowerCase();
     final encodeAsPng = ext == '.png';
 
     final annotatedBytes = _drawFaceBoundingBoxes(
       rawImageBytes: sourceImageBytes,
-      faces: faces,
+      faceMatches: faceMatches,
       lineThickness: lineThickness,
       encodeAsPng: encodeAsPng,
       sourceImagePath: sourceImagePath,
@@ -892,20 +757,14 @@ class FaceVerification {
     return _AnnotatedImageOutput(path: file.path, bytes: annotatedBytes);
   }
 
-  Future<String> _resolveAnnotatedImagePath({
-    required String sourceImagePath,
-    String? outputPath,
-  }) async {
+  Future<String> _resolveAnnotatedImagePath({required String sourceImagePath, String? outputPath}) async {
     if (outputPath != null && outputPath.trim().isNotEmpty) {
       return outputPath;
     }
 
     final tempDir = await getTemporaryDirectory();
     final sourceExt = p.extension(sourceImagePath).toLowerCase();
-    final safeExt =
-        (sourceExt == '.png' || sourceExt == '.jpg' || sourceExt == '.jpeg')
-        ? sourceExt
-        : '.jpg';
+    final safeExt = (sourceExt == '.png' || sourceExt == '.jpg' || sourceExt == '.jpeg') ? sourceExt : '.jpg';
     final baseName = p.basenameWithoutExtension(sourceImagePath);
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     return p.join(tempDir.path, '${baseName}_faces_$timestamp$safeExt');
@@ -913,22 +772,21 @@ class FaceVerification {
 
   Uint8List _drawFaceBoundingBoxes({
     required Uint8List rawImageBytes,
-    required List<Face> faces,
+    required List<_FaceMatchResult> faceMatches,
     required int lineThickness,
     required bool encodeAsPng,
     required String sourceImagePath,
   }) {
     final decoded = img.decodeImage(rawImageBytes);
     if (decoded == null) {
-      throw Exception(
-        'Could not decode image bytes for annotation: $sourceImagePath',
-      );
+      throw Exception('Could not decode image bytes for annotation: $sourceImagePath');
     }
 
     final maxX = decoded.width - 1;
     final maxY = decoded.height - 1;
 
-    for (final face in faces) {
+    for (final match in faceMatches) {
+      final face = match.face;
       final rect = face.boundingBox;
 
       int left = rect.left.floor();
@@ -952,24 +810,63 @@ class FaceVerification {
         bottom = (top + 1 <= maxY) ? top + 1 : top;
       }
 
-      img.drawRect(
-        decoded,
-        x1: left,
-        y1: top,
-        x2: right,
-        y2: bottom,
-        color: img.ColorRgb8(0, 255, 0),
-        thickness: lineThickness,
-      );
+      img.drawRect(decoded, x1: left, y1: top, x2: right, y2: bottom, color: img.ColorRgb8(0, 255, 0), thickness: lineThickness);
+
+      final label = match.name?.trim();
+      if (label != null && label.isNotEmpty) {
+        final font = img.arial48;
+        final rawLabelHeight = font.lineHeight > 0 ? font.lineHeight : 48;
+        final int leftPadding = (lineThickness + 16).clamp(16, 48).toInt();
+        final int bottomPadding = (lineThickness + 14).clamp(14, 40).toInt();
+
+        int labelWidth = 0;
+        for (final codeUnit in label.codeUnits) {
+          labelWidth += font.characterXAdvance(String.fromCharCode(codeUnit));
+        }
+        if (labelWidth <= 0) {
+          labelWidth = label.length * 28;
+        }
+
+        final double labelScale = decoded.width >= 3200
+            ? 2.1
+            : decoded.width >= 2200
+            ? 1.75
+            : decoded.width >= 1400
+            ? 1.4
+            : 1.12;
+
+        final rawTextCanvas = img.Image(width: labelWidth + 8, height: rawLabelHeight + 8, numChannels: 4);
+        img.drawString(rawTextCanvas, label, font: font, x: 4, y: 4, color: img.ColorRgba8(0, 255, 0, 255));
+        final scaledTextCanvas = img.copyResize(rawTextCanvas, width: (rawTextCanvas.width * labelScale).round(), height: (rawTextCanvas.height * labelScale).round());
+        final labelHeight = scaledTextCanvas.height;
+
+        final int maxTextX = (maxX - scaledTextCanvas.width - 2).clamp(0, maxX).toInt();
+        int textX = (left + leftPadding).clamp(0, maxTextX).toInt();
+        int textY = bottom - labelHeight - bottomPadding;
+
+        // Keep label near the bottom edge of the box when possible.
+        // If not enough room, place it below; otherwise place it above.
+        if (textY < top + 1) {
+          final belowY = bottom + 4;
+          if (belowY + labelHeight <= maxY) {
+            textY = belowY;
+          } else {
+            textY = (top - labelHeight - 4).clamp(0, maxY).toInt();
+          }
+        } else {
+          textY = textY.clamp(0, maxY).toInt();
+        }
+
+        img.compositeImage(decoded, scaledTextCanvas, dstX: textX, dstY: textY);
+      }
     }
 
-    final encoded = encodeAsPng
-        ? img.encodePng(decoded)
-        : img.encodeJpg(decoded, quality: 95);
+    final encoded = encodeAsPng ? img.encodePng(decoded) : img.encodeJpg(decoded, quality: 95);
     return Uint8List.fromList(encoded);
   }
 
   /// Register a face from a pre-computed embedding (e.g., from server).
+  /// Optional [name] can be stored and used later for face-box labels.
   /// Skips if the face record (id + imageId) already exists.
   ///
   /// Returns a map with:
@@ -977,74 +874,44 @@ class FaceVerification {
   /// - 'message': String (description of what happened)
   /// - 'id': String? (user ID if successful)
   /// - 'imageId': String? (image ID if successful)
-  Future<Map<String, dynamic>> registerFromEmbedding({
-    required String id,
-    required String imageId,
-    required List<double> embedding,
-  }) async {
+  Future<Map<String, dynamic>> registerFromEmbedding({required String id, required String imageId, required List<double> embedding, String? name}) async {
     _ensureInitialized();
 
     // Validate parameters
     if (id.trim().isEmpty) {
-      return {
-        'success': false,
-        'message': 'ID cannot be empty',
-        'id': null,
-        'imageId': null,
-      };
+      return {'success': false, 'message': 'ID cannot be empty', 'id': null, 'imageId': null};
     }
 
     if (imageId.trim().isEmpty) {
-      return {
-        'success': false,
-        'message': 'imageId cannot be empty',
-        'id': null,
-        'imageId': null,
-      };
+      return {'success': false, 'message': 'imageId cannot be empty', 'id': null, 'imageId': null};
     }
 
     // Validate embedding size
     if (embedding.length != 512) {
-      return {
-        'success': false,
-        'message': 'Invalid embedding size: ${embedding.length} (expected 512)',
-        'id': null,
-        'imageId': null,
-      };
+      return {'success': false, 'message': 'Invalid embedding size: ${embedding.length} (expected 512)', 'id': null, 'imageId': null};
     }
 
     // Check if already exists
     final existing = await _store.getByUserIdAndImageId(id, imageId);
     if (existing != null) {
-      return {
-        'success': false,
-        'message': 'Face record already exists (skipped)',
-        'id': id,
-        'imageId': imageId,
-      };
+      return {'success': false, 'message': 'Face record already exists (skipped)', 'id': id, 'imageId': imageId};
     }
 
     // Create and insert record
-    final record = FaceRecord(id, imageId, embedding);
+    final record = FaceRecord(id, imageId, embedding, name: name);
     await _store.upsert(record, replace: false);
 
     final totalFaces = await _store.getFaceCountForUser(id);
-    log(
-      '✓ Registered embedding for user "$id" with imageId "$imageId". Total faces: $totalFaces',
-    );
+    log('✓ Registered embedding for user "$id" with imageId "$imageId". Total faces: $totalFaces');
 
-    return {
-      'success': true,
-      'message': 'Successfully registered',
-      'id': id,
-      'imageId': imageId,
-    };
+    return {'success': true, 'message': 'Successfully registered', 'id': id, 'imageId': imageId};
   }
 
   /// Register multiple faces from pre-computed embeddings (batch operation).
   /// Each item in embeddingsData should contain:
   /// - 'staff_id': int or String (user ID)
   /// - 's3_key': String (image identifier)
+  /// - optional 'name' or 'staff_name': String
   /// - 'embedding': List<dynamic> (512 floats)
   ///
   /// Returns a list of results for each embedding with:
@@ -1052,9 +919,7 @@ class FaceVerification {
   /// - 'message': String
   /// - 'id': String?
   /// - 'imageId': String?
-  Future<List<Map<String, dynamic>>> registerFromEmbeddingsBatch({
-    required List<Map<String, dynamic>> embeddingsData,
-  }) async {
+  Future<List<Map<String, dynamic>>> registerFromEmbeddingsBatch({required List<Map<String, dynamic>> embeddingsData}) async {
     _ensureInitialized();
 
     final results = <Map<String, dynamic>>[];
@@ -1064,45 +929,28 @@ class FaceVerification {
         // Extract and convert data
         final staffId = item['staff_id']?.toString() ?? '';
         final s3Key = item['s3_key']?.toString() ?? '';
+        final name = item['name']?.toString() ?? item['staff_name']?.toString();
         final embeddingRaw = item['embedding'] as List?;
 
         if (embeddingRaw == null) {
-          results.add({
-            'success': false,
-            'message': 'Missing embedding data',
-            'id': staffId.isEmpty ? null : staffId,
-            'imageId': s3Key.isEmpty ? null : s3Key,
-          });
+          results.add({'success': false, 'message': 'Missing embedding data', 'id': staffId.isEmpty ? null : staffId, 'imageId': s3Key.isEmpty ? null : s3Key});
           continue;
         }
 
         // Convert to List<double>
-        final embedding = embeddingRaw
-            .map((e) => (e as num).toDouble())
-            .toList();
+        final embedding = embeddingRaw.map((e) => (e as num).toDouble()).toList();
 
         // Register single embedding
-        final result = await registerFromEmbedding(
-          id: staffId,
-          imageId: s3Key,
-          embedding: embedding,
-        );
+        final result = await registerFromEmbedding(id: staffId, imageId: s3Key, embedding: embedding, name: (name == null || name.trim().isEmpty) ? null : name.trim());
 
         results.add(result);
       } catch (e) {
-        results.add({
-          'success': false,
-          'message': 'Error: ${e.toString()}',
-          'id': item['staff_id']?.toString(),
-          'imageId': item['s3_key']?.toString(),
-        });
+        results.add({'success': false, 'message': 'Error: ${e.toString()}', 'id': item['staff_id']?.toString(), 'imageId': item['s3_key']?.toString()});
       }
     }
 
     final successCount = results.where((r) => r['success'] == true).length;
-    log(
-      '✅ Batch registration complete: $successCount/${results.length} successful',
-    );
+    log('✅ Batch registration complete: $successCount/${results.length} successful');
 
     return results;
   }

@@ -8,17 +8,19 @@ import 'package:sqflite/sqflite.dart';
 class FaceRecord {
   final String id;
   final String imageId;
+  final String? name;
   final List<double> embedding;
   final DateTime createdAt;
 
-  FaceRecord(this.id, this.imageId, this.embedding, {DateTime? createdAt}) : createdAt = createdAt ?? DateTime.now();
+  FaceRecord(this.id, this.imageId, this.embedding, {this.name, DateTime? createdAt}) : createdAt = createdAt ?? DateTime.now();
 
-  Map<String, Object?> toMap() => {'id': id, 'image_id': imageId, 'embedding': jsonEncode(embedding), 'created_at': createdAt.millisecondsSinceEpoch};
+  Map<String, Object?> toMap() => {'id': id, 'image_id': imageId, 'name': name, 'embedding': jsonEncode(embedding), 'created_at': createdAt.millisecondsSinceEpoch};
 
   static FaceRecord fromMap(Map<String, Object?> map) => FaceRecord(
     map['id'] as String,
     map['image_id'] as String,
     (jsonDecode(map['embedding'] as String) as List).map((e) => (e as num).toDouble()).toList(),
+    name: map['name'] as String?,
     createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
   );
 }
@@ -39,12 +41,13 @@ class FaceStore {
     final dbPath = p.join(dir.path, 'face_verification.db');
     _db = await openDatabase(
       dbPath,
-      version: 3,
+      version: 4,
       onCreate: (db, v) async {
         await db.execute('''
         CREATE TABLE faces (
           id TEXT NOT NULL,
           image_id TEXT NOT NULL,
+          name TEXT,
           embedding TEXT NOT NULL,
           created_at INTEGER NOT NULL,
           PRIMARY KEY (id, image_id)
@@ -60,12 +63,22 @@ class FaceStore {
               CREATE TABLE faces (
                 id TEXT NOT NULL,
                 image_id TEXT NOT NULL,
+                name TEXT,
                 embedding TEXT NOT NULL,
                 created_at INTEGER NOT NULL,
                 PRIMARY KEY (id, image_id)
               )
         ''');
           log('Dropped old faces table and created new schema (composite PK).');
+        }
+
+        if (oldVersion < 4) {
+          final columns = await db.rawQuery("PRAGMA table_info(faces)");
+          final hasNameColumn = columns.any((row) => row['name'] == 'name');
+          if (!hasNameColumn) {
+            await db.execute('ALTER TABLE faces ADD COLUMN name TEXT');
+            log('Added optional "name" column to faces table.');
+          }
         }
       },
     );

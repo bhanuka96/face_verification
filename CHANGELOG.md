@@ -1,3 +1,20 @@
+## 0.3.6
+
+* **Feature**: Optional user `name` support for face records
+  * Added nullable `name` column in local DB (safe migration to DB v4)
+  * Existing users/records remain compatible (`name` can be null)
+* **Feature**: Name-aware annotation in group-photo output
+  * `identifyAllUsersFromImagePathWithBoundingBoxes()` now draws matched user name near the face box when available
+  * If name is not available, only green face boundaries are drawn
+* **Enhancement**: Registration APIs accept optional `name`
+  * `registerFromImagePath(..., name: ...)`
+  * `registerFromEmbedding(..., name: ...)`
+  * `registerFromEmbeddingsBatch(...)` now accepts optional `name` / `staff_name` in each item
+* **Tuning**: Improved annotation label readability and clipping behavior
+  * Increased text rendering size for high-resolution images
+  * Added safer horizontal/vertical placement to avoid first-character clipping
+* **Docs**: Updated README examples and API signatures for optional `name`
+
 ## 0.3.5
 
 * **Chore**: Bump to v0.3.5 and upgrade `google_mlkit_face_detection` to `^0.13.2`
