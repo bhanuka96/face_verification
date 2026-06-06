@@ -13,8 +13,8 @@ Ideal for attendance systems, secure login, access control, KYC workflows, and o
 * **Parallel batch processing**: NEW `identifyUsersFromImagePaths()` processes 10 images in ~5-7 seconds (vs 50s sequential).
 * **Multi-image identification**: Identify users across multiple images with configurable parallel processing.
 * **Annotated group output**: NEW `identifyAllUsersFromImagePathWithBoundingBoxes()` returns an image with green face boundaries (v0.3.4).
-* **Name labels on face boxes**: If a matched face has stored `name`, it is rendered near the box (v0.3.6).
-* **Optional name storage**: Registration APIs now accept optional `name` for display use (v0.3.6).
+* **Name labels on face boxes**: If a matched face has stored `name`, it is rendered near the box (v0.3.7).
+* **Optional name storage**: Registration APIs now accept optional `name` for display use (v0.3.7).
 * **Crash prevention**: Pool-based concurrency control (max 3 concurrent operations) prevents thread exhaustion.
 * **Type-safe results**: New `ImageIdentificationResult` class for per-image results.
 * **Database safety**: Automatic recovery from closed connections, isolate-safe database access.
@@ -50,7 +50,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  face_verification: ^0.3.6
+  face_verification: ^0.3.7
 ```
 
 Run:

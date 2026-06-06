@@ -1,3 +1,9 @@
+## 0.3.7
+
+* **Chore**: Bump to v0.3.7 and upgrade `image` and sqflite
+  * Keeps face detection dependency aligned with latest patch updates
+  * No breaking API changes
+
 ## 0.3.6
 
 * **Feature**: Optional user `name` support for face records
